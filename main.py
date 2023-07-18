@@ -1,3 +1,4 @@
+import asyncio
 import os
 
 import uvicorn
@@ -6,8 +7,10 @@ from fastapi import FastAPI
 from pyrogram import Client, filters
 from pyrogram.handlers import MessageHandler
 from pytgcalls import PyTgCalls, idle
+from sanic import Sanic
 
 import endpoints.root
+import endpoints.root as root
 import shared
 from commands.movetotop import movetotop
 from commands.setlimit import setlimit
@@ -24,7 +27,12 @@ API_HASH = os.environ.get(f"API_HASH")
 
 tg_app = Client("vcmanager", api_id=API_ID, api_hash=API_HASH, phone_number=PHONE_NUMBER)
 call_py = PyTgCalls(tg_app)
-api = FastAPI()
+
+api = Sanic.get_app(
+    "vcmanApi",
+    force_create=True,
+)
+
 
 @call_py.on_participants_change()
 async def vc_partecipants_change(client: PyTgCalls, update):
@@ -46,9 +54,11 @@ tg_app.add_handler(MessageHandler(
     filters.command("movetotop")
 ), shared.GROUP_ID)
 
-api.include_router(endpoints.root)
+api.blueprint(endpoints.root.rootBp)
+
+
 if __name__ == "__main__":
-    config = uvicorn.Config("main:endpoints", port=5889, log_level="info")
+    config = uvicorn.Config("main:api", port=5889, log_level="debug", use_colors=True, reload=True)
     server = uvicorn.Server(config)
 
     call_py.start()

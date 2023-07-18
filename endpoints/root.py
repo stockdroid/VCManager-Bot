@@ -1,7 +1,8 @@
-from fastapi import APIRouter
+from sanic import Blueprint, Request, json
 
-router = APIRouter()
+rootBp = Blueprint("root")
 
-@router.get("/")
-async def read_root():
-    return {"Hello": "World"}
+
+@rootBp.get("/")
+async def read_root(req: Request):
+    return json({"Hello": "World"})
