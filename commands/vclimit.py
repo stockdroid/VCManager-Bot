@@ -1,8 +1,8 @@
 from pyrogram import Client
 from pyrogram.types import Message
 
-from shared import limit
+import shared
 
 
 async def vclimit(_: Client, message: Message):
-    await message.reply_text(f"VC Limit: {limit}")
+    await message.reply_text(f"VC Limit: {shared.limit}")
