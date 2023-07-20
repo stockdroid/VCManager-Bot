@@ -7,15 +7,16 @@ whitelistbp = Blueprint("whitelist")
 
 
 @whitelistbp.get("/whitelist")
-@openapi.response(200, '{"whitelist": [<whitelist>], "defwhitelist": [<defwhitelist>]}')
+@openapi.response(200, '{"whitelist": [<whitelist>]}')
 async def get_whitelist(req: Request):
-    return json({"whitelist": shared.whitelist, "defwhitelist": shared.DEF_WHITELIST})
+    return json({"whitelist": shared.whitelist})
 
 
 @whitelistbp.post("/whitelist")
-@openapi.response(200, '{"currwhitelist": [<currwhitelist>], "defwhitelist": [<defwhitelist>]}')
+@openapi.response(200, '{"currwhitelist": [<currwhitelist>]}')
+@openapi.parameter("id", int)
 async def add_to_whitelist(req: Request):
     id_to_add = int(req.args.get("id", 0))
-    if id_to_add not in shared.whitelist:
+    if id_to_add not in shared.whitelist and id_to_add != 0:
         shared.whitelist.append(id_to_add)
-    return json({"currwhitelist": shared.whitelist, "defwhitelist": shared.DEF_WHITELIST})
+    return json({"currwhitelist": shared.whitelist})

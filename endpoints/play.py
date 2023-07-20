@@ -1,7 +1,8 @@
+import os
 import time
 
-from pytgcalls.types import InputStream
-from pytgcalls.types.input_stream import InputAudioStream
+#from pytgcalls.types import InputStream
+#from pytgcalls.types.input_stream import InputAudioStream
 from sanic import Blueprint, Request, json
 from sanic_ext.extensions.openapi import openapi
 
@@ -15,32 +16,58 @@ playbp = Blueprint("playbp")
 @openapi.response(200, '{"playing": true}')
 @openapi.response(204, '{"error": "FileNotFound"}')
 async def play_audio(req: Request, file_name: str):
-    try:
-        await call_py.change_stream(shared.GROUP_ID, InputStream(InputAudioStream(f"./audio/{file_name}.audio")))
-        time.sleep(0.5)
-        await call_py.pause_stream(shared.GROUP_ID)
-        time.sleep(0.5)
-        await call_py.resume_stream(shared.GROUP_ID)
-        return json({"playing": True})
-    except FileNotFoundError:
+    if os.path.isfile(f"./audio/{file_name}.audio") is False:
         return json({"error": "FileNotFound"}, status=204)
+    else:
+        call_py.input_filename = f"./audio/{file_name}.audio"
+        call_py.restart_playout()
+        shared.time_started = time.time()
+        call_py.play_on_repeat = False
+    #time.sleep(0.5)
+    #await call_py.pause_stream(shared.GROUP_ID)
+    #time.sleep(0.5)
+    #await call_py.resume_stream(shared.GROUP_ID)
+        return json({"playing": True})
+
+@playbp.post("/play/duration/<file_name:str>")
+@openapi.response(200, '{"duration": <duration>}')
+@openapi.response(204, '{"error": "FileNotFound"}')
+async def audio_duration(req: Request, file_name: str):
+    if os.path.isfile(f"./audio/{file_name}.audio") is False:
+        return json({"error": "FileNotFound"}, status=204)
+    else:
+        size = os.path.getsize(f"./audio/{file_name}.audio")
+        BIT_DEPTH = 16
+        NUM_CHANNELS = 2
+        SAMPLE_RATE = 48000
+        duration = size / (NUM_CHANNELS*SAMPLE_RATE*(BIT_DEPTH/8))
+        return json({"duration": duration})
+
 
 
 @playbp.get("/play/status")
 @openapi.response(200, '{"elapsed": <sec>}')
 async def play_status(req: Request):
-    return json({"elapsed": await call_py.played_time(shared.GROUP_ID)})
+    if shared.time_at_pause != 0:
+        time_elapsed = shared.time_at_pause
+    else:
+        time_elapsed = time.time() - shared.time_started
+    return json({"elapsed": time_elapsed if (time_elapsed < 100000) else None})
 
 
 @playbp.patch("/play/pause")
 @openapi.response(200, '{"playing": false}')
 async def pause_audio(req: Request):
-    await call_py.pause_stream(shared.GROUP_ID)
+    call_py.pause_playout()
+    shared.time_at_pause = time.time() - shared.time_started
     return json({"playing": False})
 
 
 @playbp.patch("/play/resume")
 @openapi.response(200, '{"playing": true}')
 async def resume_audio(req: Request):
-    await call_py.resume_stream(shared.GROUP_ID)
+    call_py.resume_playout()
+    if shared.time_at_pause != 0:
+        shared.time_started = time.time() - shared.time_at_pause
+        shared.time_at_pause = 0
     return json({"playing": True})
