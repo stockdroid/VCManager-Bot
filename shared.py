@@ -8,7 +8,8 @@ load_dotenv()
 
 
 DEV_MODE = True
-COMMANDS_ENABLED = True
+COMMANDS_ENABLED = False
+ENABLE_CF_AUTH = True
 GROUP_ID = -1001692353473
 DEF_LIMIT = 2 if DEV_MODE else 30
 limit = DEF_LIMIT
@@ -36,7 +37,7 @@ DEF_WHITELIST = [
     74911939,
     5570289840,
     224016528,
-    #610215341
+    610215341
 ]
 
 whitelist = DEF_WHITELIST
@@ -53,3 +54,5 @@ call_py = GroupCallFactory(tg_app).get_file_group_call()
 
 time_started = 0
 time_at_pause = 0
+
+public_keys = []

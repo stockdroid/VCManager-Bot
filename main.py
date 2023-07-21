@@ -1,16 +1,16 @@
+import json
+import os
 import threading
-import types
-from typing import List
 
+import jwt
+import requests
 import uvicorn
+from dotenv import load_dotenv
+from jwt.algorithms import RSAAlgorithm
 from pyrogram import filters, idle
 from pyrogram.handlers import MessageHandler
 from pyrogram.raw.base import Update
 from pyrogram.raw.types import UpdateNewChannelMessage, MessageService, MessageActionGroupCall
-from pytgcalls.implementation import group_call
-from pytgcalls.implementation.group_call import GroupCall
-from pytgcalls.mtproto.data import GroupCallParticipantWrapper
-#from pytgcalls import PyTgCalls, idle
 from sanic import Sanic
 
 import endpoints.root
@@ -31,6 +31,7 @@ from events.vc_part_change import part_change
 from shared import call_py, tg_app
 
 api = Sanic.get_app("vcmanApi", force_create=True,)
+load_dotenv()
 
 
 if shared.COMMANDS_ENABLED:
@@ -63,6 +64,18 @@ async def raw(_, update: Update, __, chats: dict):
             if type(update.message.action) == MessageActionGroupCall:
                 if update.message.action.duration is None:
                     await call_py.start(shared.GROUP_ID)
+
+if shared.ENABLE_CF_AUTH:
+    print("Auth enabled")
+    res = requests.get(f"https://{os.environ.get('CF_URL')}/cdn-cgi/access/certs")
+    jwk_set = res.json()
+    algo = RSAAlgorithm(RSAAlgorithm.SHA256)
+    for key_dict in jwk_set['keys']:
+        public_key = algo.from_jwk(json.dumps(key_dict))
+        shared.public_keys.append(public_key)
+    print("Loaded public keys from CF")
+else:
+    print("Auth disabled, this api is open without authorization!")
 
 if __name__ == "__main__":
     config = uvicorn.Config("main:api", port=5889, log_level="debug", use_colors=True, reload=True)

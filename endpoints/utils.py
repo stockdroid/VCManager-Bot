@@ -8,30 +8,35 @@ from sanic import Blueprint, Request, json
 from sanic_ext.extensions.openapi import openapi
 
 import shared
+from ext.auth_check import auth_check
 from shared import call_py, tg_app
 
 utilsbp = Blueprint("utils")
 
 
 @utilsbp.get("/devmode")
+@auth_check
 @openapi.response(200, '{"devmode": <status>}')
 async def is_devmode(req: Request):
     return json({"devmode": shared.DEV_MODE})
 
 
 @utilsbp.get("/commands")
+@auth_check
 @openapi.response(200, '{"commands_enabled": <status>}')
 async def commands_enabled(req: Request):
     return json({"commands_enabled": shared.COMMANDS_ENABLED})
 
 
 @utilsbp.get("/groupid")
+@auth_check
 @openapi.response(200, '{"groupid": <groupid>}')
 async def groupid(req: Request):
     return json({"groupid": shared.GROUP_ID})
 
 
 @utilsbp.get("/resolve/<username:str>")
+@auth_check
 @openapi.response(200, '{"username": <username>, "id": <id>}')
 @openapi.response(422, '{"error": "PEER_ID_INVALID"}')
 async def resolve(req: Request, username: str):
@@ -43,6 +48,7 @@ async def resolve(req: Request, username: str):
 
 
 @utilsbp.get("/info/<user_id:int>")
+@auth_check
 @openapi.response(200, '{"user_id": <id>, "info": {<info>}}')
 @openapi.response(422, '{"error": "PEER_ID_INVALID"}')
 async def info(req: Request, user_id: int):
@@ -53,8 +59,8 @@ async def info(req: Request, user_id: int):
         return json({"error": "PEER_ID_INVALID"}, 422)
 
 
-
 @utilsbp.get("/participants")
+@auth_check
 @openapi.response(200, '{"participants": [<participants>]}')
 @openapi.response(422, '{"error": "NOT_IN_VOICECHAT"}')
 async def participants(req: Request):
@@ -62,12 +68,13 @@ async def participants(req: Request):
         return json({"error": "NOT_IN_VOICECHAT"}, 422)
     else:
         participants_list = (await tg_app.invoke(GetGroupParticipants(
-            call = call_py.full_chat.call, ids = [], sources = [], offset = "", limit=-1
+            call=call_py.full_chat.call, ids=[], sources=[], offset="", limit=-1
         ))).participants
         return json({"participants": jsonlib.loads(str(participants_list))})
 
 
 @utilsbp.get("/pfp/<user_id:int>")
+@auth_check
 @openapi.response(200, '{"user_id": <id>, "media": <base64jpeg>}')
 @openapi.response(422, '{"error": "PEER_ID_INVALID"}')
 async def pfp(req: Request, user_id: int):
@@ -85,4 +92,3 @@ async def pfp(req: Request, user_id: int):
         )
     except PeerIdInvalid:
         return json({"error": "PEER_ID_INVALID"}, 422)
-

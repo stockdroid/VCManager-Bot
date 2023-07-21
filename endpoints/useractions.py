@@ -4,12 +4,14 @@ from sanic import Blueprint, Request, json
 from sanic_ext.extensions.openapi import openapi
 
 import shared
+from ext.auth_check import auth_check
 from shared import call_py, tg_app
 
 useractionsbp = Blueprint("useractionsbp")
 
 
 @useractionsbp.post("/mute/<id_user:int>")
+@auth_check
 @openapi.response(200, '{"muted": True}')
 @openapi.response(422, '{"error": "PEER_ID_INVALID"}')
 async def mute_user(req: Request, id_user: int):
@@ -30,6 +32,7 @@ async def mute_user(req: Request, id_user: int):
 
 
 @useractionsbp.post("/allow/<id_user:int>")
+@auth_check
 @openapi.response(200, '{"unmuted": True}')
 @openapi.response(422, '{"error": "PEER_ID_INVALID"}')
 async def unmute_user(req: Request, id_user: int):
@@ -50,6 +53,7 @@ async def unmute_user(req: Request, id_user: int):
 
 
 @useractionsbp.post("/volume/<id_user:int>")
+@auth_check
 @openapi.response(200, '{"volume": <vol>}')
 @openapi.parameter('volume', int)
 @openapi.response(422, '{"error": "PEER_ID_INVALID"}')

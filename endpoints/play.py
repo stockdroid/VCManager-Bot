@@ -7,12 +7,14 @@ from sanic import Blueprint, Request, json
 from sanic_ext.extensions.openapi import openapi
 
 import shared
+from ext.auth_check import auth_check
 from shared import call_py
 
 playbp = Blueprint("playbp")
 
 
 @playbp.post("/play/<file_name:str>")
+@auth_check
 @openapi.response(200, '{"playing": true}')
 @openapi.response(204, '{"error": "FileNotFound"}')
 async def play_audio(req: Request, file_name: str):
@@ -23,13 +25,10 @@ async def play_audio(req: Request, file_name: str):
         call_py.restart_playout()
         shared.time_started = time.time()
         call_py.play_on_repeat = False
-    #time.sleep(0.5)
-    #await call_py.pause_stream(shared.GROUP_ID)
-    #time.sleep(0.5)
-    #await call_py.resume_stream(shared.GROUP_ID)
         return json({"playing": True})
 
 @playbp.post("/play/duration/<file_name:str>")
+@auth_check
 @openapi.response(200, '{"duration": <duration>}')
 @openapi.response(204, '{"error": "FileNotFound"}')
 async def audio_duration(req: Request, file_name: str):
@@ -46,6 +45,7 @@ async def audio_duration(req: Request, file_name: str):
 
 
 @playbp.get("/play/status")
+@auth_check
 @openapi.response(200, '{"elapsed": <sec>}')
 async def play_status(req: Request):
     if shared.time_at_pause != 0:
@@ -56,6 +56,7 @@ async def play_status(req: Request):
 
 
 @playbp.patch("/play/pause")
+@auth_check
 @openapi.response(200, '{"playing": false}')
 async def pause_audio(req: Request):
     call_py.pause_playout()
@@ -64,6 +65,7 @@ async def pause_audio(req: Request):
 
 
 @playbp.patch("/play/resume")
+@auth_check
 @openapi.response(200, '{"playing": true}')
 async def resume_audio(req: Request):
     call_py.resume_playout()

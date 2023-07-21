@@ -2,17 +2,20 @@ from sanic import Blueprint, Request, json
 from sanic_ext.extensions.openapi import openapi
 
 import shared
+from ext.auth_check import auth_check
 
 whitelistbp = Blueprint("whitelist")
 
 
 @whitelistbp.get("/whitelist")
+@auth_check
 @openapi.response(200, '{"whitelist": [<whitelist>]}')
 async def get_whitelist(req: Request):
     return json({"whitelist": shared.whitelist})
 
 
 @whitelistbp.post("/whitelist")
+@auth_check
 @openapi.response(200, '{"currwhitelist": [<currwhitelist>]}')
 @openapi.parameter("id", int)
 async def add_to_whitelist(req: Request):

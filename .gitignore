@@ -218,3 +218,4 @@ fabric.properties
 
 *.session
 *.session-journal
+/.idea/deployment.xml
