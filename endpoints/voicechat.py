@@ -15,6 +15,7 @@ voicechatbp = Blueprint("voicechat")
 @voicechatbp.post("/voicechat/end")
 @auth_check
 @openapi.response(200, '{"ended": true}')
+@openapi.response(401, '{"error": "UNAUTHORIZED"}')
 @openapi.response(204, '{"error": "NoVC"}')
 async def end_vc(req: Request):
     try:
@@ -26,6 +27,7 @@ async def end_vc(req: Request):
 
 @voicechatbp.post("/voicechat/create")
 @auth_check
+@openapi.response(401, '{"error": "UNAUTHORIZED"}')
 @openapi.response(200, '{"created": <state>}')
 async def create_vc(req: Request):
     try:
@@ -39,13 +41,15 @@ async def create_vc(req: Request):
 
 @voicechatbp.post("/voicechat/status")
 @auth_check
+@openapi.response(401, '{"error": "UNAUTHORIZED"}')
 @openapi.response(200, '{"vcpresent": <state>}')
 async def status_vc(req: Request):
-    return json({"vcpresent": call_py.full_chat.call is not None})
+    return json({"vcpresent": call_py.full_chat is not None})
 
 
 @voicechatbp.post("/voicechat/title")
 @auth_check
+@openapi.response(401, '{"error": "UNAUTHORIZED"}')
 @openapi.response(200, '{"newtitle": <title>}')
 @openapi.parameter("title", str)
 async def change_title(req: Request):
@@ -57,6 +61,7 @@ async def change_title(req: Request):
 
 @voicechatbp.post("/voicechat/record")
 @auth_check
+@openapi.response(401, '{"error": "UNAUTHORIZED"}')
 @openapi.response(200, '{"record": <state>}')
 @openapi.parameter("start", bool)
 @openapi.parameter("video", bool)
@@ -70,6 +75,7 @@ async def record_vc(req: Request):
 
 @voicechatbp.post("/voicechat/join")
 @auth_check
+@openapi.response(401, '{"error": "UNAUTHORIZED"}')
 @openapi.response(200, '{"joined": true}')
 async def join_vc(req: Request):
     await call_py.start(shared.GROUP_ID)

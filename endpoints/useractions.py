@@ -13,6 +13,7 @@ useractionsbp = Blueprint("useractionsbp")
 @useractionsbp.post("/mute/<id_user:int>")
 @auth_check
 @openapi.response(200, '{"muted": True}')
+@openapi.response(401, '{"error": "UNAUTHORIZED"}')
 @openapi.response(422, '{"error": "PEER_ID_INVALID"}')
 async def mute_user(req: Request, id_user: int):
     voice_chat = call_py.full_chat.call
@@ -34,6 +35,7 @@ async def mute_user(req: Request, id_user: int):
 @useractionsbp.post("/allow/<id_user:int>")
 @auth_check
 @openapi.response(200, '{"unmuted": True}')
+@openapi.response(401, '{"error": "UNAUTHORIZED"}')
 @openapi.response(422, '{"error": "PEER_ID_INVALID"}')
 async def unmute_user(req: Request, id_user: int):
     voice_chat = call_py.full_chat.call
@@ -56,6 +58,7 @@ async def unmute_user(req: Request, id_user: int):
 @auth_check
 @openapi.response(200, '{"volume": <vol>}')
 @openapi.parameter('volume', int)
+@openapi.response(401, '{"error": "UNAUTHORIZED"}')
 @openapi.response(422, '{"error": "PEER_ID_INVALID"}')
 async def set_volume(req: Request, id_user: int):
     voice_chat = call_py.full_chat.call

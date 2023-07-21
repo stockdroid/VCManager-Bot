@@ -46,6 +46,7 @@ async def audio_duration(req: Request, file_name: str):
 
 @playbp.get("/play/status")
 @auth_check
+@openapi.response(401, '{"error": "UNAUTHORIZED"}')
 @openapi.response(200, '{"elapsed": <sec>}')
 async def play_status(req: Request):
     if shared.time_at_pause != 0:
@@ -57,6 +58,7 @@ async def play_status(req: Request):
 
 @playbp.patch("/play/pause")
 @auth_check
+@openapi.response(401, '{"error": "UNAUTHORIZED"}')
 @openapi.response(200, '{"playing": false}')
 async def pause_audio(req: Request):
     call_py.pause_playout()
@@ -66,6 +68,7 @@ async def pause_audio(req: Request):
 
 @playbp.patch("/play/resume")
 @auth_check
+@openapi.response(401, '{"error": "UNAUTHORIZED"}')
 @openapi.response(200, '{"playing": true}')
 async def resume_audio(req: Request):
     call_py.resume_playout()

@@ -9,6 +9,7 @@ limitsbp = Blueprint("limits")
 
 @limitsbp.get("/limits")
 @auth_check
+@openapi.response(401, '{"error": "UNAUTHORIZED"}')
 @openapi.response(200, '{"currlimit": <limit>, "deflimit": <deflimit>}')
 async def getLimits(req: Request):
     return json({"currlimit": shared.limit, "deflimit": shared.DEF_LIMIT})
@@ -17,6 +18,7 @@ async def getLimits(req: Request):
 @limitsbp.post("/limits")
 @auth_check
 @openapi.parameter("limit", int)
+@openapi.response(401, '{"error": "UNAUTHORIZED"}')
 @openapi.response(200, '{"currlimit": <limit>, "exlimit": <exlimit>, "deflimit": <deflimit>}')
 async def setLimits(req: Request):
     limit = int(req.args.get("limit", shared.limit))

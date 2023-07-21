@@ -9,6 +9,7 @@ queuebp = Blueprint("queue")
 
 @queuebp.get("/queue")
 @auth_check
+@openapi.response(401, '{"error": "UNAUTHORIZED"}')
 @openapi.response(200, '{"queue": [<ids>]}')
 async def get_queue(req: Request):
     return json({"queue": shared.muted_queue})
@@ -16,6 +17,7 @@ async def get_queue(req: Request):
 
 @queuebp.get("/queue/<id_user:int>")
 @auth_check
+@openapi.response(401, '{"error": "UNAUTHORIZED"}')
 @openapi.response(200, '{"queuepos": <pos>}')
 async def get_queue_index(req: Request, id_user: int):
     try:
@@ -28,6 +30,7 @@ async def get_queue_index(req: Request, id_user: int):
 @queuebp.post("/queue/<id_user:int>")
 @auth_check
 @openapi.parameter("index", int)
+@openapi.response(401, '{"error": "UNAUTHORIZED"}')
 @openapi.response(200, '{"queuepos": <pos>}')
 async def set_queue_index(req: Request, id_user: int):
     new_index = int(req.args.get("index", shared.muted_queue.index(id_user)))
