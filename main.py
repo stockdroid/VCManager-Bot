@@ -82,6 +82,5 @@ if __name__ == "__main__":
     server = uvicorn.Server(config)
 
     tg_app.start()
-    call_py.start(shared.GROUP_ID)
     threading.Thread(target=server.run, daemon=True).start()
     idle()

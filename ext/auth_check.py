@@ -12,14 +12,17 @@ load_dotenv()
 
 
 def check_token(request: Request):
-    if not request.token:
+    try:
+        auth: str = request.headers.getone("Authorization")
+        auth = auth.replace("Bearer ", "").replace("Token ", "")
+    except KeyError:
         return False
 
     valid_token = False
     for key in shared.public_keys:
         try:
             # decode returns the claims that has the email when needed
-            jwt.decode(request.token, key=key, audience=os.environ.get('CF_AUD'), algorithms=['RS256'])
+            jwt.decode(auth, key=key, audience=os.environ.get('CF_AUD'), algorithms=['RS256'])
             valid_token = True
             break
         except:

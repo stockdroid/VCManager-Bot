@@ -8,7 +8,7 @@ limitsbp = Blueprint("limits")
 
 
 @limitsbp.get("/limits")
-@openapi.parameter("Authorization", location="header")
+@openapi.secured("token")
 @auth_check
 @openapi.response(401, '{"error": "UNAUTHORIZED"}')
 @openapi.response(200, '{"currlimit": <limit>, "deflimit": <deflimit>}')
@@ -17,7 +17,7 @@ async def getLimits(req: Request):
 
 
 @limitsbp.post("/limits")
-@openapi.parameter("Authorization", location="header")
+@openapi.secured("token")
 @auth_check
 @openapi.parameter("limit", int)
 @openapi.response(401, '{"error": "UNAUTHORIZED"}')

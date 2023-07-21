@@ -11,7 +11,7 @@ useractionsbp = Blueprint("useractionsbp")
 
 
 @useractionsbp.post("/mute/<id_user:int>")
-@openapi.parameter("Authorization", location="header")
+@openapi.secured("token")
 @auth_check
 @openapi.response(200, '{"muted": True}')
 @openapi.response(401, '{"error": "UNAUTHORIZED"}')
@@ -34,7 +34,7 @@ async def mute_user(req: Request, id_user: int):
 
 
 @useractionsbp.post("/allow/<id_user:int>")
-@openapi.parameter("Authorization", location="header")
+@openapi.secured("token")
 @auth_check
 @openapi.response(200, '{"unmuted": True}')
 @openapi.response(401, '{"error": "UNAUTHORIZED"}')
@@ -57,7 +57,7 @@ async def unmute_user(req: Request, id_user: int):
 
 
 @useractionsbp.post("/volume/<id_user:int>")
-@openapi.parameter("Authorization", location="header")
+@openapi.secured("token")
 @auth_check
 @openapi.response(200, '{"volume": <vol>}')
 @openapi.parameter('volume', int)
