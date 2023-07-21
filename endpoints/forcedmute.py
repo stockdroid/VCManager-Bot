@@ -8,6 +8,7 @@ forcedmutesbp = Blueprint("forcedmutes")
 
 
 @forcedmutesbp.get("/forcedmutes")
+@openapi.parameter("Authorization", location="header")
 @auth_check
 @openapi.response(401, '{"error": "UNAUTHORIZED"}')
 @openapi.response(200, '{"forcedmutes": [<ids>]}')
@@ -16,6 +17,7 @@ async def get_forcedmutes(req: Request):
 
 
 @forcedmutesbp.post("/forcedmutes/<id_user:int>")
+@openapi.parameter("Authorization", location="header")
 @auth_check
 @openapi.response(401, '{"error": "UNAUTHORIZED"}')
 @openapi.response(200, '{"inforcedmutes": <bool>}')
@@ -24,6 +26,7 @@ async def get_in_forcedmutes(req: Request, id_user: int):
 
 
 @forcedmutesbp.post("/forcedmutes/action/<id_user:int>")
+@openapi.parameter("Authorization", location="header")
 @auth_check
 @openapi.parameter("action", str)
 @openapi.description("action can be either add or remove")

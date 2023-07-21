@@ -15,6 +15,7 @@ utilsbp = Blueprint("utils")
 
 
 @utilsbp.get("/devmode")
+@openapi.parameter("Authorization", location="header")
 @auth_check
 @openapi.response(401, '{"error": "UNAUTHORIZED"}')
 @openapi.response(200, '{"devmode": <status>}')
@@ -23,6 +24,7 @@ async def is_devmode(req: Request):
 
 
 @utilsbp.get("/commands")
+@openapi.parameter("Authorization", location="header")
 @auth_check
 @openapi.response(401, '{"error": "UNAUTHORIZED"}')
 @openapi.response(200, '{"commands_enabled": <status>}')
@@ -31,6 +33,7 @@ async def commands_enabled(req: Request):
 
 
 @utilsbp.get("/groupid")
+@openapi.parameter("Authorization", location="header")
 @auth_check
 @openapi.response(401, '{"error": "UNAUTHORIZED"}')
 @openapi.response(200, '{"groupid": <groupid>}')
@@ -39,6 +42,7 @@ async def groupid(req: Request):
 
 
 @utilsbp.get("/resolve/<username:str>")
+@openapi.parameter("Authorization", location="header")
 @auth_check
 @openapi.response(200, '{"username": <username>, "id": <id>}')
 @openapi.response(401, '{"error": "UNAUTHORIZED"}')
@@ -52,6 +56,7 @@ async def resolve(req: Request, username: str):
 
 
 @utilsbp.get("/info/<user_id:int>")
+@openapi.parameter("Authorization", location="header")
 @auth_check
 @openapi.response(200, '{"user_id": <id>, "info": {<info>}}')
 @openapi.response(401, '{"error": "UNAUTHORIZED"}')
@@ -65,6 +70,7 @@ async def info(req: Request, user_id: int):
 
 
 @utilsbp.get("/participants")
+@openapi.parameter("Authorization", location="header")
 @auth_check
 @openapi.response(200, '{"participants": [<participants>]}')
 @openapi.response(401, '{"error": "UNAUTHORIZED"}')
@@ -80,6 +86,7 @@ async def participants(req: Request):
 
 
 @utilsbp.get("/pfp/<user_id:int>")
+@openapi.parameter("Authorization", location="header")
 @auth_check
 @openapi.response(200, '{"user_id": <id>, "media": <base64jpeg>}')
 @openapi.response(401, '{"error": "UNAUTHORIZED"}')

@@ -14,6 +14,7 @@ playbp = Blueprint("playbp")
 
 
 @playbp.post("/play/<file_name:str>")
+@openapi.parameter("Authorization", location="header")
 @auth_check
 @openapi.response(200, '{"playing": true}')
 @openapi.response(204, '{"error": "FileNotFound"}')
@@ -28,6 +29,7 @@ async def play_audio(req: Request, file_name: str):
         return json({"playing": True})
 
 @playbp.post("/play/duration/<file_name:str>")
+@openapi.parameter("Authorization", location="header")
 @auth_check
 @openapi.response(200, '{"duration": <duration>}')
 @openapi.response(204, '{"error": "FileNotFound"}')
@@ -45,6 +47,7 @@ async def audio_duration(req: Request, file_name: str):
 
 
 @playbp.get("/play/status")
+@openapi.parameter("Authorization", location="header")
 @auth_check
 @openapi.response(401, '{"error": "UNAUTHORIZED"}')
 @openapi.response(200, '{"elapsed": <sec>}')
@@ -57,6 +60,7 @@ async def play_status(req: Request):
 
 
 @playbp.patch("/play/pause")
+@openapi.parameter("Authorization", location="header")
 @auth_check
 @openapi.response(401, '{"error": "UNAUTHORIZED"}')
 @openapi.response(200, '{"playing": false}')
@@ -67,6 +71,7 @@ async def pause_audio(req: Request):
 
 
 @playbp.patch("/play/resume")
+@openapi.parameter("Authorization", location="header")
 @auth_check
 @openapi.response(401, '{"error": "UNAUTHORIZED"}')
 @openapi.response(200, '{"playing": true}')

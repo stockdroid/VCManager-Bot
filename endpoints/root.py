@@ -9,6 +9,7 @@ rootBp = Blueprint("root")
 @rootBp.get("/")
 @openapi.response(200, "non dovresti essere qua...")
 @openapi.response(401, '{"error": "UNAUTHORIZED"}')
+@openapi.parameter("Authorization", location="header")
 @auth_check
 async def read_root(req: Request):
     return text("non dovresti essere qua...")

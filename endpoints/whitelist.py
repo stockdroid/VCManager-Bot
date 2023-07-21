@@ -8,6 +8,7 @@ whitelistbp = Blueprint("whitelist")
 
 
 @whitelistbp.get("/whitelist")
+@openapi.parameter("Authorization", location="header")
 @auth_check
 @openapi.response(200, '{"whitelist": [<whitelist>]}')
 @openapi.response(401, '{"error": "UNAUTHORIZED"}')
@@ -16,6 +17,7 @@ async def get_whitelist(req: Request):
 
 
 @whitelistbp.post("/whitelist")
+@openapi.parameter("Authorization", location="header")
 @auth_check
 @openapi.response(200, '{"currwhitelist": [<currwhitelist>]}')
 @openapi.response(401, '{"error": "UNAUTHORIZED"}')

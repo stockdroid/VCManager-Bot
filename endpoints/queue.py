@@ -8,6 +8,7 @@ queuebp = Blueprint("queue")
 
 
 @queuebp.get("/queue")
+@openapi.parameter("Authorization", location="header")
 @auth_check
 @openapi.response(401, '{"error": "UNAUTHORIZED"}')
 @openapi.response(200, '{"queue": [<ids>]}')
@@ -16,6 +17,7 @@ async def get_queue(req: Request):
 
 
 @queuebp.get("/queue/<id_user:int>")
+@openapi.parameter("Authorization", location="header")
 @auth_check
 @openapi.response(401, '{"error": "UNAUTHORIZED"}')
 @openapi.response(200, '{"queuepos": <pos>}')
@@ -28,6 +30,7 @@ async def get_queue_index(req: Request, id_user: int):
 
 
 @queuebp.post("/queue/<id_user:int>")
+@openapi.parameter("Authorization", location="header")
 @auth_check
 @openapi.parameter("index", int)
 @openapi.response(401, '{"error": "UNAUTHORIZED"}')
