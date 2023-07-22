@@ -29,7 +29,7 @@ def _gen_log_txt(
     to_return += f"URL: {endpoint}\n"
     to_return += f"Method: {method}\n"
     to_return += f"Succeded: {success}\n"
-    to_return += f"Response: {response}\n" if (response != "") else f"Error: {error}\n"
+    to_return += f"Response: {response if (len(response) <= 1000) else 'too long to send'}\n" if (response != "") else f"Error: {error}\n"
     to_return += f"Timestamp: {int(time.time())}\n"
 
     return to_return
