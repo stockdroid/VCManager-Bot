@@ -3,6 +3,9 @@ from sanic_ext import openapi
 
 import shared
 from ext.auth_check import auth_check
+import json as jsonlib
+
+from ext.log_helper import request_log
 
 queuebp = Blueprint("queue")
 
@@ -13,6 +16,7 @@ queuebp = Blueprint("queue")
 @openapi.response(401, '{"error": "UNAUTHORIZED"}')
 @openapi.response(200, '{"queue": [<ids>]}')
 async def get_queue(req: Request):
+    await request_log(req, True, jsonlib.dumps({"queue": shared.muted_queue}), "")
     return json({"queue": shared.muted_queue})
 
 
@@ -26,6 +30,7 @@ async def get_queue_index(req: Request, id_user: int):
         queue_index = shared.muted_queue.index(id_user)
     except ValueError:
         queue_index = None
+    await request_log(req, True, jsonlib.dumps({"queuepos": queue_index}), "")
     return json({"queuepos": queue_index})
 
 
@@ -39,4 +44,5 @@ async def set_queue_index(req: Request, id_user: int):
     new_index = int(req.args.get("index", shared.muted_queue.index(id_user)))
     shared.muted_queue.remove(id_user)
     shared.muted_queue.insert(new_index, id_user)
+    await request_log(req, True, jsonlib.dumps({"queuepos": new_index}), "")
     return json({"queuepos": new_index})

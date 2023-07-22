@@ -9,6 +9,7 @@ from sanic_ext.extensions.openapi import openapi
 
 import shared
 from ext.auth_check import auth_check
+from ext.log_helper import request_log
 from shared import call_py, tg_app
 
 utilsbp = Blueprint("utils")
@@ -20,6 +21,7 @@ utilsbp = Blueprint("utils")
 @openapi.response(401, '{"error": "UNAUTHORIZED"}')
 @openapi.response(200, '{"devmode": <status>}')
 async def is_devmode(req: Request):
+    await request_log(req, True, jsonlib.dumps({"devmode": shared.DEV_MODE}), "")
     return json({"devmode": shared.DEV_MODE})
 
 
@@ -29,6 +31,7 @@ async def is_devmode(req: Request):
 @openapi.response(401, '{"error": "UNAUTHORIZED"}')
 @openapi.response(200, '{"commands_enabled": <status>}')
 async def commands_enabled(req: Request):
+    await request_log(req, True, jsonlib.dumps({"commands_enabled": shared.COMMANDS_ENABLED}), "")
     return json({"commands_enabled": shared.COMMANDS_ENABLED})
 
 
@@ -38,6 +41,7 @@ async def commands_enabled(req: Request):
 @openapi.response(401, '{"error": "UNAUTHORIZED"}')
 @openapi.response(200, '{"groupid": <groupid>}')
 async def groupid(req: Request):
+    await request_log(req, True, jsonlib.dumps({"groupid": shared.GROUP_ID}), "")
     return json({"groupid": shared.GROUP_ID})
 
 
@@ -50,8 +54,10 @@ async def groupid(req: Request):
 async def resolve(req: Request, username: str):
     try:
         user_id = await tg_app.resolve_peer(username)
+        await request_log(req, True, jsonlib.dumps({"username": username, "id": user_id.user_id}), "")
         return json({"username": username, "id": user_id.user_id})
     except PeerIdInvalid:
+        await request_log(req, False, "", jsonlib.dumps({"error": "PEER_ID_INVALID"}))
         return json({"error": "PEER_ID_INVALID"}, 422)
 
 
@@ -64,8 +70,10 @@ async def resolve(req: Request, username: str):
 async def info(req: Request, user_id: int):
     try:
         user_info = await tg_app.get_users(user_id)
+        await request_log(req, True, jsonlib.dumps({"user_id": user_id, "info": jsonlib.loads(str(user_info))}), "")
         return json({"user_id": user_id, "info": jsonlib.loads(str(user_info))})
     except:
+        await request_log(req, False, "", jsonlib.dumps({"error": "PEER_ID_INVALID"}))
         return json({"error": "PEER_ID_INVALID"}, 422)
 
 
@@ -76,12 +84,14 @@ async def info(req: Request, user_id: int):
 @openapi.response(401, '{"error": "UNAUTHORIZED"}')
 @openapi.response(422, '{"error": "NOT_IN_VOICECHAT"}')
 async def participants(req: Request):
-    if call_py.full_chat.call is None:
+    if call_py.full_chat is None or call_py.full_chat.call is None:
+        await request_log(req, False, "", jsonlib.dumps({"error": "NOT_IN_VOICECHAT"}))
         return json({"error": "NOT_IN_VOICECHAT"}, 422)
     else:
         participants_list = (await tg_app.invoke(GetGroupParticipants(
             call=call_py.full_chat.call, ids=[], sources=[], offset="", limit=-1
         ))).participants
+        await request_log(req, True, jsonlib.dumps({"participants": jsonlib.loads(str(participants_list))}), "")
         return json({"participants": jsonlib.loads(str(participants_list))})
 
 
@@ -98,6 +108,10 @@ async def pfp(req: Request, user_id: int):
         async for photoelem in photos:
             photo = photoelem
         media = await tg_app.download_media(photo.file_id, in_memory=True)
+        await request_log(req, True, jsonlib.dumps({
+                "user_id": user_id,
+                "media": "data:image/jpeg;base64," + base64.b64encode(media.getvalue()).decode("UTF-8")
+            }), "")
         return json(
             {
                 "user_id": user_id,
@@ -105,4 +119,5 @@ async def pfp(req: Request, user_id: int):
             }
         )
     except PeerIdInvalid:
+        await request_log(req, False, "", jsonlib.dumps({"error": "PEER_ID_INVALID"}))
         return json({"error": "PEER_ID_INVALID"}, 422)

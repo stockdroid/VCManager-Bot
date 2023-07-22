@@ -3,6 +3,8 @@ from sanic_ext import openapi
 
 import shared
 from ext.auth_check import auth_check
+from ext.log_helper import request_log
+import json as jsonlib
 
 forcedmutesbp = Blueprint("forcedmutes")
 
@@ -13,6 +15,7 @@ forcedmutesbp = Blueprint("forcedmutes")
 @openapi.response(401, '{"error": "UNAUTHORIZED"}')
 @openapi.response(200, '{"forcedmutes": [<ids>]}')
 async def get_forcedmutes(req: Request):
+    await request_log(req, True, jsonlib.dumps({"forcedmutes": shared.force_muted}), "")
     return json({"forcedmutes": shared.force_muted})
 
 
@@ -22,6 +25,7 @@ async def get_forcedmutes(req: Request):
 @openapi.response(401, '{"error": "UNAUTHORIZED"}')
 @openapi.response(200, '{"inforcedmutes": <bool>}')
 async def get_in_forcedmutes(req: Request, id_user: int):
+    await request_log(req, True, jsonlib.dumps({"inforcedmutes": id_user in shared.force_muted}), "")
     return json({"inforcedmutes": id_user in shared.force_muted})
 
 
@@ -36,6 +40,7 @@ async def get_in_forcedmutes(req: Request, id_user: int):
 async def action_forcedmutes(req: Request, id_user: int):
     done = False
     if req.args.get("action", "") not in ["add", "remove"]:
+        await request_log(req, False, "", jsonlib.dumps({"error": "UnrecognizedAction"}))
         return json({"error": "UnrecognizedAction"}, 204)
     else:
         if req.args.get("action", "") == "add":
@@ -46,4 +51,5 @@ async def action_forcedmutes(req: Request, id_user: int):
             if id_user not in shared.force_muted:
                 done = True
                 shared.force_muted.remove(id_user)
+        await request_log(req, True, jsonlib.dumps({"action": req.args.get("action", ""), "done": done}), "")
         return json({"action": req.args.get("action", ""), "done": done})

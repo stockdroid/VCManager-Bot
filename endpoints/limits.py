@@ -3,7 +3,8 @@ from sanic_ext.extensions.openapi import openapi
 
 import shared
 from ext.auth_check import auth_check
-
+from ext.log_helper import request_log
+import json as jsonlib
 limitsbp = Blueprint("limits")
 
 
@@ -13,6 +14,7 @@ limitsbp = Blueprint("limits")
 @openapi.response(401, '{"error": "UNAUTHORIZED"}')
 @openapi.response(200, '{"currlimit": <limit>, "deflimit": <deflimit>}')
 async def getLimits(req: Request):
+    await request_log(req, True, jsonlib.dumps({"currlimit": shared.limit, "deflimit": shared.DEF_LIMIT}), "")
     return json({"currlimit": shared.limit, "deflimit": shared.DEF_LIMIT})
 
 
@@ -26,4 +28,5 @@ async def setLimits(req: Request):
     limit = int(req.args.get("limit", shared.limit))
     ex_limit = shared.limit
     shared.limit = limit
+    await request_log(req, True, jsonlib.dumps({"currlimit": shared.limit, "exlimit": ex_limit, "deflimit": shared.DEF_LIMIT}), "")
     return json({"currlimit": shared.limit, "exlimit": ex_limit, "deflimit": shared.DEF_LIMIT})

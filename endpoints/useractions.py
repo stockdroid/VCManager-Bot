@@ -5,7 +5,9 @@ from sanic_ext.extensions.openapi import openapi
 
 import shared
 from ext.auth_check import auth_check
+from ext.log_helper import request_log
 from shared import call_py, tg_app
+import json as jsonlib
 
 useractionsbp = Blueprint("useractionsbp")
 
@@ -28,8 +30,10 @@ async def mute_user(req: Request, id_user: int):
         )
         if id_user not in shared.force_muted:
             shared.force_muted.append(id_user)
+        await request_log(req, True, jsonlib.dumps({"muted": True}), "")
         return json({"muted": True})
     except PeerIdInvalid:
+        await request_log(req, False, "", jsonlib.dumps({"error": "PEER_ID_INVALID"}))
         return json({"error": "PEER_ID_INVALID"}, 422)
 
 
@@ -51,8 +55,10 @@ async def unmute_user(req: Request, id_user: int):
         )
         if id_user in shared.force_muted:
             shared.force_muted.remove(id_user)
+        await request_log(req, True, jsonlib.dumps({"muted": False}), "")
         return json({"muted": False})
     except PeerIdInvalid:
+        await request_log(req, False, "", jsonlib.dumps({"error": "PEER_ID_INVALID"}))
         return json({"error": "PEER_ID_INVALID"}, 422)
 
 
@@ -73,6 +79,8 @@ async def set_volume(req: Request, id_user: int):
                 volume=int(req.args.get("volume", 100))
             )
         )
+        await request_log(req, True, jsonlib.dumps({"volume": int(req.args.get("volume", 100))}), "")
         return json({"volume": int(req.args.get("volume", 100))})
     except PeerIdInvalid:
+        await request_log(req, False, "", jsonlib.dumps({"error": "PEER_ID_INVALID"}))
         return json({"error": "PEER_ID_INVALID"}, 422)

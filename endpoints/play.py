@@ -1,14 +1,14 @@
 import os
 import time
 
-#from pytgcalls.types import InputStream
-#from pytgcalls.types.input_stream import InputAudioStream
 from sanic import Blueprint, Request, json
 from sanic_ext.extensions.openapi import openapi
 
 import shared
 from ext.auth_check import auth_check
+from ext.log_helper import request_log
 from shared import call_py
+import json as jsonlib
 
 playbp = Blueprint("playbp")
 
@@ -35,6 +35,7 @@ async def play_audio(req: Request, file_name: str):
 @openapi.response(204, '{"error": "FileNotFound"}')
 async def audio_duration(req: Request, file_name: str):
     if os.path.isfile(f"./audio/{file_name}.audio") is False:
+        await request_log(req, False, "", jsonlib.dumps({"error": "FileNotFound"}))
         return json({"error": "FileNotFound"}, status=204)
     else:
         size = os.path.getsize(f"./audio/{file_name}.audio")
@@ -42,6 +43,7 @@ async def audio_duration(req: Request, file_name: str):
         NUM_CHANNELS = 2
         SAMPLE_RATE = 48000
         duration = size / (NUM_CHANNELS*SAMPLE_RATE*(BIT_DEPTH/8))
+        await request_log(req, True, jsonlib.dumps({"duration": duration}), "")
         return json({"duration": duration})
 
 
@@ -56,6 +58,7 @@ async def play_status(req: Request):
         time_elapsed = shared.time_at_pause
     else:
         time_elapsed = time.time() - shared.time_started
+    await request_log(req, True, jsonlib.dumps({"elapsed": time_elapsed if (time_elapsed < 100000) else None}), "")
     return json({"elapsed": time_elapsed if (time_elapsed < 100000) else None})
 
 
@@ -67,6 +70,7 @@ async def play_status(req: Request):
 async def pause_audio(req: Request):
     call_py.pause_playout()
     shared.time_at_pause = time.time() - shared.time_started
+    await request_log(req, True, jsonlib.dumps({"playing": False}), "")
     return json({"playing": False})
 
 
@@ -75,7 +79,7 @@ async def pause_audio(req: Request):
     type="http",
     scheme="bearer",
     bearer_format="JWT"
-                 )
+)
 @auth_check
 @openapi.response(401, '{"error": "UNAUTHORIZED"}')
 @openapi.response(200, '{"playing": true}')
@@ -84,4 +88,5 @@ async def resume_audio(req: Request):
     if shared.time_at_pause != 0:
         shared.time_started = time.time() - shared.time_at_pause
         shared.time_at_pause = 0
+    await request_log(req, True, jsonlib.dumps({"playing": True}), "")
     return json({"playing": True})
