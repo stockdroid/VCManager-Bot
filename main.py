@@ -12,6 +12,7 @@ from pyrogram.handlers import MessageHandler
 from pyrogram.raw.base import Update
 from pyrogram.raw.types import UpdateNewChannelMessage, MessageService, MessageActionGroupCall
 from sanic import Sanic
+from sanic_ext import Extend
 
 import endpoints.root
 import shared
@@ -30,9 +31,12 @@ from events.play_ended import play_ended
 from events.vc_part_change import part_change
 from shared import call_py, tg_app
 
-api = Sanic.get_app("vcmanApi", force_create=True,)
+api = Sanic.get_app("vcmanApi", force_create=True)
 load_dotenv()
 
+api.config.CORS_ORIGINS = "*"
+api.config.CORS_SEND_WILDCARD = True
+api.config.OAS_UI_DEFAULT = "swagger"
 
 if shared.COMMANDS_ENABLED:
     tg_app.add_handler(MessageHandler(
@@ -57,6 +61,7 @@ for blueprint in blueprints:
 call_py.on_participant_list_updated(part_change)
 call_py.on_playout_ended(play_ended)
 
+
 @tg_app.on_raw_update(group=shared.GROUP_ID)
 async def raw(_, update: Update, __, chats: dict):
     if type(update) == UpdateNewChannelMessage and int(str(shared.GROUP_ID).replace("-100", "")) in chats.keys():
@@ -64,6 +69,7 @@ async def raw(_, update: Update, __, chats: dict):
             if type(update.message.action) == MessageActionGroupCall:
                 if update.message.action.duration is None:
                     await call_py.start(shared.GROUP_ID)
+
 
 if shared.ENABLE_CF_AUTH:
     print("Auth enabled")
@@ -74,11 +80,19 @@ if shared.ENABLE_CF_AUTH:
         public_key = algo.from_jwk(json.dumps(key_dict))
         shared.public_keys.append(public_key)
     print("Loaded public keys from CF")
+    api.ext.openapi.add_security_scheme(
+        "token",
+        type="http",
+        scheme="bearer",
+        bearer_format="JWT",
+        description="Cloudflare access auth token"
+    )
+    print("Added security scheme")
 else:
     print("Auth disabled, this api is open without authorization!")
 
 if __name__ == "__main__":
-    config = uvicorn.Config("main:api", port=5889, log_level="debug", use_colors=True, reload=True)
+    config = uvicorn.Config("main:api", host="0.0.0.0", port=5889, log_level="debug", use_colors=True, reload=True)
     server = uvicorn.Server(config)
 
     tg_app.start()

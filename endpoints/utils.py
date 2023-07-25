@@ -1,14 +1,16 @@
 import base64
 import json as jsonlib
+from typing import List, AsyncGenerator
 
 from pyrogram.errors import PeerIdInvalid
 from pyrogram.raw.functions.phone import GetGroupParticipants
-from pyrogram.types import Photo
+from pyrogram.types import Photo, User, ChatMember
 from sanic import Blueprint, Request, json
 from sanic_ext.extensions.openapi import openapi
 
 import shared
 from ext.auth_check import auth_check
+from ext.get_user import get_user, get_users
 from ext.log_helper import request_log
 from shared import call_py, tg_app
 
@@ -17,9 +19,9 @@ utilsbp = Blueprint("utils")
 
 @utilsbp.get("/devmode")
 @openapi.secured("token")
+@openapi.response(401, {"application/json": {"error": "UNAUTHORIZED"}})
+@openapi.response(200, {"application/json": {"devmode": True}})
 @auth_check
-@openapi.response(401, '{"error": "UNAUTHORIZED"}')
-@openapi.response(200, '{"devmode": <status>}')
 async def is_devmode(req: Request):
     await request_log(req, True, jsonlib.dumps({"devmode": shared.DEV_MODE}), "")
     return json({"devmode": shared.DEV_MODE})
@@ -27,9 +29,9 @@ async def is_devmode(req: Request):
 
 @utilsbp.get("/commands")
 @openapi.secured("token")
+@openapi.response(401, {"application/json": {"error": "UNAUTHORIZED"}})
+@openapi.response(200, {"application/json": {"commands_enabled": False}})
 @auth_check
-@openapi.response(401, '{"error": "UNAUTHORIZED"}')
-@openapi.response(200, '{"commands_enabled": <status>}')
 async def commands_enabled(req: Request):
     await request_log(req, True, jsonlib.dumps({"commands_enabled": shared.COMMANDS_ENABLED}), "")
     return json({"commands_enabled": shared.COMMANDS_ENABLED})
@@ -37,9 +39,9 @@ async def commands_enabled(req: Request):
 
 @utilsbp.get("/groupid")
 @openapi.secured("token")
+@openapi.response(401, {"application/json": {"error": "UNAUTHORIZED"}})
+@openapi.response(200, {"application/json": {"groupid": -100123456}})
 @auth_check
-@openapi.response(401, '{"error": "UNAUTHORIZED"}')
-@openapi.response(200, '{"groupid": <groupid>}')
 async def groupid(req: Request):
     await request_log(req, True, jsonlib.dumps({"groupid": shared.GROUP_ID}), "")
     return json({"groupid": shared.GROUP_ID})
@@ -47,10 +49,10 @@ async def groupid(req: Request):
 
 @utilsbp.get("/resolve/<username:str>")
 @openapi.secured("token")
+@openapi.response(200, {"application/json": {"username": "chicchi7393", "id": 704625262}})
+@openapi.response(401, {"application/json": {"error": "UNAUTHORIZED"}})
+@openapi.response(422, {"application/json": {"error": "PEER_ID_INVALID"}})
 @auth_check
-@openapi.response(200, '{"username": <username>, "id": <id>}')
-@openapi.response(401, '{"error": "UNAUTHORIZED"}')
-@openapi.response(422, '{"error": "PEER_ID_INVALID"}')
 async def resolve(req: Request, username: str):
     try:
         user_id = await tg_app.resolve_peer(username)
@@ -63,26 +65,35 @@ async def resolve(req: Request, username: str):
 
 @utilsbp.get("/info/<user_id:int>")
 @openapi.secured("token")
+@openapi.response(200, {"application/json": {"user_id": 704625262, "info": {"user_id": 704625262}}})
+@openapi.response(401, {"application/json": {"error": "UNAUTHORIZED"}})
+@openapi.response(422, {"application/json": {"error": "PEER_ID_INVALID"}})
 @auth_check
-@openapi.response(200, '{"user_id": <id>, "info": {<info>}}')
-@openapi.response(401, '{"error": "UNAUTHORIZED"}')
-@openapi.response(422, '{"error": "PEER_ID_INVALID"}')
 async def info(req: Request, user_id: int):
-    try:
-        user_info = await tg_app.get_users(user_id)
-        await request_log(req, True, jsonlib.dumps({"user_id": user_id, "info": jsonlib.loads(str(user_info))}), "")
-        return json({"user_id": user_id, "info": jsonlib.loads(str(user_info))})
-    except:
-        await request_log(req, False, "", jsonlib.dumps({"error": "PEER_ID_INVALID"}))
-        return json({"error": "PEER_ID_INVALID"}, 422)
+    user = await get_user(user_id)
+    await request_log(req, True, jsonlib.dumps(user), "")
+    return json({"user_id": user.id, "info": jsonlib.loads(str(user))})
+
+
+@utilsbp.get("/massinfo/<user_ids:str>")
+@openapi.description(text="Separare gli user id da una virgola, prendere solo utenti nel gruppo")
+@openapi.secured("token")
+@openapi.response(200, {"application/json": [{"user_id": 704625262, "info": {"user_id": 704625262}}]})
+@openapi.response(401, {"application/json": {"error": "UNAUTHORIZED"}})
+@auth_check
+async def massinfo(req: Request, user_ids: str):
+    users = await get_users([int(x) for x in user_ids.split("%2C") if x.isdigit()])
+    list_info = [{"user_id": x.id, "info": jsonlib.loads(str(x))} for x in users]
+    await request_log(req, True, jsonlib.dumps(list_info), "")
+    return json(list_info)
 
 
 @utilsbp.get("/participants")
 @openapi.secured("token")
+@openapi.response(200, {"application/json": {"participants": [70462562, 777000]}})
+@openapi.response(401, {"application/json": {"error": "UNAUTHORIZED"}})
+@openapi.response(422, {"application/json": {"error": "NOT_IN_VOICECHAT"}})
 @auth_check
-@openapi.response(200, '{"participants": [<participants>]}')
-@openapi.response(401, '{"error": "UNAUTHORIZED"}')
-@openapi.response(422, '{"error": "NOT_IN_VOICECHAT"}')
 async def participants(req: Request):
     if call_py.full_chat is None or call_py.full_chat.call is None:
         await request_log(req, False, "", jsonlib.dumps({"error": "NOT_IN_VOICECHAT"}))
@@ -97,10 +108,10 @@ async def participants(req: Request):
 
 @utilsbp.get("/pfp/<user_id:int>")
 @openapi.secured("token")
+@openapi.response(200, {"application/json": {"user_id": 70462562, "media": "data:image/jpeg;base64,..."}})
+@openapi.response(401, {"application/json": {"error": "UNAUTHORIZED"}})
+@openapi.response(422, {"application/json": {"error": "PEER_ID_INVALID"}})
 @auth_check
-@openapi.response(200, '{"user_id": <id>, "media": <base64jpeg>}')
-@openapi.response(401, '{"error": "UNAUTHORIZED"}')
-@openapi.response(422, '{"error": "PEER_ID_INVALID"}')
 async def pfp(req: Request, user_id: int):
     try:
         photos = tg_app.get_chat_photos(user_id, 1)
@@ -109,9 +120,9 @@ async def pfp(req: Request, user_id: int):
             photo = photoelem
         media = await tg_app.download_media(photo.file_id, in_memory=True)
         await request_log(req, True, jsonlib.dumps({
-                "user_id": user_id,
-                "media": "data:image/jpeg;base64," + base64.b64encode(media.getvalue()).decode("UTF-8")
-            }), "")
+            "user_id": user_id,
+            "media": "data:image/jpeg;base64," + base64.b64encode(media.getvalue()).decode("UTF-8")
+        }), "")
         return json(
             {
                 "user_id": user_id,
@@ -121,3 +132,32 @@ async def pfp(req: Request, user_id: int):
     except PeerIdInvalid:
         await request_log(req, False, "", jsonlib.dumps({"error": "PEER_ID_INVALID"}))
         return json({"error": "PEER_ID_INVALID"}, 422)
+
+
+@utilsbp.get("/gworkspace/roles")
+@openapi.secured("token")
+@openapi.response(200, {"application/json": {"roles": []}})
+@openapi.response(401, {"application/json": {"error": "UNAUTHORIZED"}})
+@openapi.response(401, {"application/json": {"error": "NO_CF_ACCESS"}})
+@auth_check
+async def get_user_roles(req: Request):
+    if not shared.ENABLE_CF_AUTH:
+        await request_log(req, False, "", jsonlib.dumps({"error": "NO_CF_ACCESS"}))
+        return json({"error": "NO_CF_ACCESS"}, 401)
+    else:
+        await request_log(req, True, jsonlib.dumps({"roles": req.ctx.groups}), "")
+        return json({"roles": req.ctx.groups})
+
+@utilsbp.get("/gworkspace/name")
+@openapi.secured("token")
+@openapi.response(200, {"application/json": {"name": "realname"}})
+@openapi.response(401, {"application/json": {"error": "UNAUTHORIZED"}})
+@openapi.response(401, {"application/json": {"error": "NO_CF_ACCESS"}})
+@auth_check
+async def get_user_name(req: Request):
+    if not shared.ENABLE_CF_AUTH:
+        await request_log(req, False, "", jsonlib.dumps({"error": "NO_CF_ACCESS"}))
+        return json({"error": "NO_CF_ACCESS"}, 401)
+    else:
+        await request_log(req, True, jsonlib.dumps({"name": req.ctx.name}), "")
+        return json({"name": req.ctx.name})

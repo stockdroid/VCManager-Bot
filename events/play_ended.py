@@ -6,4 +6,4 @@ from ext.log_helper import play_ended_log
 
 async def play_ended(group_call: GroupCall, filename: str):
     shared.time_started = 0
-    play_ended_log()
+    await play_ended_log()

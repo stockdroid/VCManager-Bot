@@ -59,13 +59,13 @@ def vc_action_log(muted: bool, id: int, username: str, name: str):
     asyncio.run(_send_log_msg(to_return))
 
 
-def play_ended_log():
+async def play_ended_log():
     to_return = f"#playended\n\n"
 
     to_return += f"Play ended: yes\n"
     to_return += f"Timestamp: {int(time.time())}\n"
 
-    asyncio.run(_send_log_msg(to_return))
+    await _send_log_msg(to_return)
 
 
 async def auth_error(email: str, endpoint: str, method: str, error: str):

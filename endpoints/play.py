@@ -1,6 +1,7 @@
 import os
 import time
 
+from pytgcalls.exceptions import CallBeforeStartError
 from sanic import Blueprint, Request, json
 from sanic_ext.extensions.openapi import openapi
 
@@ -15,44 +16,61 @@ playbp = Blueprint("playbp")
 
 @playbp.post("/play/<file_name:str>")
 @openapi.secured("token")
+@openapi.response(200, {"application/json": {"playing": True}})
+@openapi.response(400, {"application/json": {"error": "FileNotFound"}})
+@openapi.response(406, {"application/json": {"error": "NotInVC"}})
 @auth_check
-@openapi.response(200, '{"playing": true}')
-@openapi.response(204, '{"error": "FileNotFound"}')
 async def play_audio(req: Request, file_name: str):
     if os.path.isfile(f"./audio/{file_name}.audio") is False:
-        return json({"error": "FileNotFound"}, status=204)
+        await request_log(req, False, "", jsonlib.dumps({"error": "FileNotFound"}))
+        return json({"error": "FileNotFound"}, status=400)
     else:
-        call_py.input_filename = f"./audio/{file_name}.audio"
-        call_py.restart_playout()
-        shared.time_started = time.time()
-        call_py.play_on_repeat = False
-        return json({"playing": True})
+        try:
+            call_py.input_filename = f"./audio/{file_name}.audio"
+            call_py.restart_playout()
+            shared.time_started = time.time()
+            call_py.play_on_repeat = False
+            await request_log(req, True, jsonlib.dumps({"playing": True}), "")
+            return json({"playing": True})
+        except CallBeforeStartError:
+            await request_log(req, True, "", jsonlib.dumps({"error": "NotInVC"}))
+            return json({"error": "NotInVC"}, 406)
+
+
+@playbp.get("/play/list")
+@openapi.secured("token")
+@openapi.response(200, {"application/json": {"filenames": []}})
+@auth_check
+async def list_files(req: Request):
+    files_list = os.listdir("./audio")
+    await request_log(req, True, jsonlib.dumps({"filenames": files_list}), "")
+    return json({"filenames": files_list})
+
 
 @playbp.post("/play/duration/<file_name:str>")
 @openapi.secured("token")
+@openapi.response(200, {"application/json": {"duration": 4}})
+@openapi.response(400, {"application/json": {"error": "FileNotFound"}})
 @auth_check
-@openapi.response(200, '{"duration": <duration>}')
-@openapi.response(204, '{"error": "FileNotFound"}')
 async def audio_duration(req: Request, file_name: str):
     if os.path.isfile(f"./audio/{file_name}.audio") is False:
         await request_log(req, False, "", jsonlib.dumps({"error": "FileNotFound"}))
-        return json({"error": "FileNotFound"}, status=204)
+        return json({"error": "FileNotFound"}, status=400)
     else:
         size = os.path.getsize(f"./audio/{file_name}.audio")
         BIT_DEPTH = 16
         NUM_CHANNELS = 2
         SAMPLE_RATE = 48000
-        duration = size / (NUM_CHANNELS*SAMPLE_RATE*(BIT_DEPTH/8))
+        duration = size / (NUM_CHANNELS * SAMPLE_RATE * (BIT_DEPTH / 8))
         await request_log(req, True, jsonlib.dumps({"duration": duration}), "")
         return json({"duration": duration})
 
 
-
 @playbp.get("/play/status")
 @openapi.secured("token")
+@openapi.response(401, {"application/json": {"error": "UNAUTHORIZED"}})
+@openapi.response(200, {"application/json": {"elapsed": 6}})
 @auth_check
-@openapi.response(401, '{"error": "UNAUTHORIZED"}')
-@openapi.response(200, '{"elapsed": <sec>}')
 async def play_status(req: Request):
     if shared.time_at_pause != 0:
         time_elapsed = shared.time_at_pause
@@ -64,9 +82,9 @@ async def play_status(req: Request):
 
 @playbp.patch("/play/pause")
 @openapi.secured("token")
+@openapi.response(401, {"application/json": {"error": "UNAUTHORIZED"}})
+@openapi.response(200, {"application/json": {"playing": False}})
 @auth_check
-@openapi.response(401, '{"error": "UNAUTHORIZED"}')
-@openapi.response(200, '{"playing": false}')
 async def pause_audio(req: Request):
     call_py.pause_playout()
     shared.time_at_pause = time.time() - shared.time_started
@@ -75,14 +93,10 @@ async def pause_audio(req: Request):
 
 
 @playbp.patch("/play/resume")
-@openapi.secured(
-    type="http",
-    scheme="bearer",
-    bearer_format="JWT"
-)
+@openapi.secured("token")
+@openapi.response(401, {"application/json": {"error": "UNAUTHORIZED"}})
+@openapi.response(200, {"application/json": {"playing": True}})
 @auth_check
-@openapi.response(401, '{"error": "UNAUTHORIZED"}')
-@openapi.response(200, '{"playing": true}')
 async def resume_audio(req: Request):
     call_py.resume_playout()
     if shared.time_at_pause != 0:

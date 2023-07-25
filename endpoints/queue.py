@@ -12,9 +12,9 @@ queuebp = Blueprint("queue")
 
 @queuebp.get("/queue")
 @openapi.secured("token")
+@openapi.response(401, {"application/json": {"error": "UNAUTHORIZED"}})
+@openapi.response(200, {"application/json": {"queue": [777000, 123456]}})
 @auth_check
-@openapi.response(401, '{"error": "UNAUTHORIZED"}')
-@openapi.response(200, '{"queue": [<ids>]}')
 async def get_queue(req: Request):
     await request_log(req, True, jsonlib.dumps({"queue": shared.muted_queue}), "")
     return json({"queue": shared.muted_queue})
@@ -22,9 +22,9 @@ async def get_queue(req: Request):
 
 @queuebp.get("/queue/<id_user:int>")
 @openapi.secured("token")
+@openapi.response(401, {"application/json": {"error": "UNAUTHORIZED"}})
+@openapi.response(200, {"application/json": {"queuepos": 2}})
 @auth_check
-@openapi.response(401, '{"error": "UNAUTHORIZED"}')
-@openapi.response(200, '{"queuepos": <pos>}')
 async def get_queue_index(req: Request, id_user: int):
     try:
         queue_index = shared.muted_queue.index(id_user)
@@ -36,10 +36,10 @@ async def get_queue_index(req: Request, id_user: int):
 
 @queuebp.post("/queue/<id_user:int>")
 @openapi.secured("token")
-@auth_check
 @openapi.parameter("index", int)
-@openapi.response(401, '{"error": "UNAUTHORIZED"}')
-@openapi.response(200, '{"queuepos": <pos>}')
+@openapi.response(401, {"application/json": {"error": "UNAUTHORIZED"}})
+@openapi.response(200, {"application/json": {"queuepos": 4}})
+@auth_check
 async def set_queue_index(req: Request, id_user: int):
     new_index = int(req.args.get("index", shared.muted_queue.index(id_user)))
     shared.muted_queue.remove(id_user)

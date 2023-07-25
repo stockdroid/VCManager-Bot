@@ -1,7 +1,13 @@
 import math
 import random
 
-from pyrogram.raw.functions.phone import DiscardGroupCall, CreateGroupCall, EditGroupCallTitle, ToggleGroupCallRecord
+from pyrogram.errors import BadRequest
+from pyrogram.raw.types.messages import ChatFull
+from pyrogram.raw.functions.channels import GetFullChannel
+from pyrogram.raw.functions.messages import GetFullChat
+from pyrogram.raw.functions.phone import DiscardGroupCall, CreateGroupCall, EditGroupCallTitle, ToggleGroupCallRecord, \
+    GetGroupCall
+from pyrogram.raw.types.phone import GroupCall
 from sanic import Blueprint, json, Request
 from sanic_ext.extensions.openapi import openapi
 
@@ -16,10 +22,10 @@ voicechatbp = Blueprint("voicechat")
 
 @voicechatbp.post("/voicechat/end")
 @openapi.secured("token")
+@openapi.response(200, {"application/json": {"ended": True}})
+@openapi.response(401, {"application/json": {"error": "UNAUTHORIZED"}})
+@openapi.response(400, {"application/json": {"error": "NoVC"}})
 @auth_check
-@openapi.response(200, '{"ended": true}')
-@openapi.response(401, '{"error": "UNAUTHORIZED"}')
-@openapi.response(204, '{"error": "NoVC"}')
 async def end_vc(req: Request):
     try:
         await tg_app.invoke(DiscardGroupCall(call=call_py.full_chat.call))
@@ -27,14 +33,14 @@ async def end_vc(req: Request):
         return json({"ended": True})
     except:
         await request_log(req, False, "", jsonlib.dumps({"error": "NoVC"}))
-        return json({"error": "NoVC"}, 204)
+        return json({"error": "NoVC"}, 400)
 
 
 @voicechatbp.post("/voicechat/create")
 @openapi.secured("token")
+@openapi.response(401, {"application/json": {"error": "UNAUTHORIZED"}})
+@openapi.response(200, {"application/json": {"created": True}})
 @auth_check
-@openapi.response(401, '{"error": "UNAUTHORIZED"}')
-@openapi.response(200, '{"created": <state>}')
 async def create_vc(req: Request):
     try:
         await tg_app.invoke(CreateGroupCall(peer=await tg_app.resolve_peer(shared.GROUP_ID),
@@ -47,22 +53,33 @@ async def create_vc(req: Request):
         return json({"created": False})
 
 
-@voicechatbp.post("/voicechat/status")
+@voicechatbp.get("/voicechat/invc")
 @openapi.secured("token")
+@openapi.response(401, {"application/json": {"error": "UNAUTHORIZED"}})
+@openapi.response(200, {"application/json": {"vcpresent": False}})
 @auth_check
-@openapi.response(401, '{"error": "UNAUTHORIZED"}')
-@openapi.response(200, '{"vcpresent": <state>}')
-async def status_vc(req: Request):
-    await request_log(req, True, jsonlib.dumps({"vcpresent": call_py.full_chat is not None}), "")
+async def invc_vc(req: Request):
+    await request_log(req, True, jsonlib.dumps({"vcpresent": call_py.group_call is not None}), "")
+    return json({"vcpresent": call_py.full_chat is not None})
+
+
+@voicechatbp.get("/voicechat/exists")
+@openapi.secured("token")
+@openapi.response(401, {"application/json": {"error": "UNAUTHORIZED"}})
+@openapi.response(200, {"application/json": {"vcpresent": False}})
+@auth_check
+async def exists_vc(req: Request):
+    chat: ChatFull = await tg_app.invoke(GetFullChannel(channel=await tg_app.resolve_peer(shared.GROUP_ID)))
+    await request_log(req, True, jsonlib.dumps({"vcpresent": chat.full_chat.call is not None}), "")
     return json({"vcpresent": call_py.full_chat is not None})
 
 
 @voicechatbp.post("/voicechat/title")
 @openapi.secured("token")
-@auth_check
-@openapi.response(401, '{"error": "UNAUTHORIZED"}')
-@openapi.response(200, '{"newtitle": <title>}')
+@openapi.response(401, {"application/json": {"error": "UNAUTHORIZED"}})
+@openapi.response(200, {"application/json": {"newtitle": "Test response"}})
 @openapi.parameter("title", str)
+@auth_check
 async def change_title(req: Request):
     new_title = req.args.get("title", "")
     await tg_app.invoke(EditGroupCallTitle(call=call_py.full_chat.call, title=new_title))
@@ -72,25 +89,47 @@ async def change_title(req: Request):
 
 @voicechatbp.post("/voicechat/record")
 @openapi.secured("token")
-@auth_check
-@openapi.response(401, '{"error": "UNAUTHORIZED"}')
-@openapi.response(200, '{"record": <state>}')
+@openapi.response(401, {"application/json": {"error": "UNAUTHORIZED"}})
+@openapi.response(400, {"application/json": {"error": "GROUPCALL_NOT_MODIFIED"}})
+@openapi.response(200, {"application/json": {"record": True}})
 @openapi.parameter("start", bool)
 @openapi.parameter("video", bool)
+@auth_check
 async def record_vc(req: Request):
-    start = req.args.get("start", False) == "true"
-    video = req.args.get("video", True) == "true"
-    await tg_app.invoke(
-        ToggleGroupCallRecord(call=call_py.full_chat.call, start=start, video=video, video_portrait=False))
-    await request_log(req, True, jsonlib.dumps({"record": start}), "")
-    return json({"record": start})
+    try:
+        start = req.args.get("start", False) == "true"
+        video = req.args.get("video", True) == "true"
+        await tg_app.invoke(
+            ToggleGroupCallRecord(call=call_py.full_chat.call, start=start, video=video, video_portrait=False))
+        await request_log(req, True, jsonlib.dumps({"record": start}), "")
+        return json({"record": start})
+    except BadRequest as e:
+        await request_log(req, False, "", jsonlib.dumps({"error": "GROUPCALL_NOT_MODIFIED"}))
+        return json({"error": "GROUPCALL_NOT_MODIFIED"}, 400)
+
+
+@voicechatbp.post("/voicechat/info")
+@openapi.secured("token")
+@openapi.response(401, {"application/json": {"error": "UNAUTHORIZED"}})
+@openapi.response(400, {"application/json": {"error": "GROUPCALL_NOT_EXIST"}})
+@openapi.response(200, {"application/json": {"info": {}}})
+@auth_check
+async def info_vc(req: Request):
+    chat: ChatFull = await tg_app.invoke(GetFullChannel(channel=await tg_app.resolve_peer(shared.GROUP_ID)))
+    if chat.full_chat.call is None:
+        await request_log(req, False, "", jsonlib.dumps({"error": "GROUPCALL_NOT_EXIST"}))
+        return json({"error": "GROUPCALL_NOT_EXIST"}, 400)
+    else:
+        group_call: GroupCall = await tg_app.invoke(GetGroupCall(call=chat.full_chat.call, limit=1))
+        await request_log(req, True, jsonlib.dumps({"info": jsonlib.loads(str(group_call.call))}), "")
+        return json({"info": jsonlib.loads(str(group_call.call))})
 
 
 @voicechatbp.post("/voicechat/join")
 @openapi.secured("token")
+@openapi.response(401, {"application/json": {"error": "UNAUTHORIZED"}})
+@openapi.response(200, {"application/json": {"joined": True}})
 @auth_check
-@openapi.response(401, '{"error": "UNAUTHORIZED"}')
-@openapi.response(200, '{"joined": true}')
 async def join_vc(req: Request):
     await call_py.start(shared.GROUP_ID)
     await request_log(req, True, jsonlib.dumps({"joined": shared.whitelist}), "")

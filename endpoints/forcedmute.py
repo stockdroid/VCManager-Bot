@@ -11,9 +11,9 @@ forcedmutesbp = Blueprint("forcedmutes")
 
 @forcedmutesbp.get("/forcedmutes")
 @openapi.secured("token")
+@openapi.response(401, {"application/json": {"error": "UNAUTHORIZED"}})
+@openapi.response(200, {"application/json": {"forcedmutes": [777000, 12345]}})
 @auth_check
-@openapi.response(401, '{"error": "UNAUTHORIZED"}')
-@openapi.response(200, '{"forcedmutes": [<ids>]}')
 async def get_forcedmutes(req: Request):
     await request_log(req, True, jsonlib.dumps({"forcedmutes": shared.force_muted}), "")
     return json({"forcedmutes": shared.force_muted})
@@ -21,9 +21,9 @@ async def get_forcedmutes(req: Request):
 
 @forcedmutesbp.post("/forcedmutes/<id_user:int>")
 @openapi.secured("token")
+@openapi.response(401, {"application/json": {"error": "UNAUTHORIZED"}})
+@openapi.response(200, {"application/json": {"inforcedmutes": True}})
 @auth_check
-@openapi.response(401, '{"error": "UNAUTHORIZED"}')
-@openapi.response(200, '{"inforcedmutes": <bool>}')
 async def get_in_forcedmutes(req: Request, id_user: int):
     await request_log(req, True, jsonlib.dumps({"inforcedmutes": id_user in shared.force_muted}), "")
     return json({"inforcedmutes": id_user in shared.force_muted})
@@ -31,24 +31,24 @@ async def get_in_forcedmutes(req: Request, id_user: int):
 
 @forcedmutesbp.post("/forcedmutes/action/<id_user:int>")
 @openapi.secured("token")
-@auth_check
 @openapi.parameter("action", str)
 @openapi.description("action can be either add or remove")
-@openapi.response(200, '{"action": <action>, "done": <state>}')
-@openapi.response(401, '{"error": "UNAUTHORIZED"}')
-@openapi.response(204, '{"error": "UnrecognizedAction"}')
+@openapi.response(200, {"application/json": {"action": "add", "done": True}})
+@openapi.response(401, {"application/json": {"error": "UNAUTHORIZED"}})
+@openapi.response(400, {"application/json": {"error": "UnrecognizedAction"}})
+@auth_check
 async def action_forcedmutes(req: Request, id_user: int):
     done = False
     if req.args.get("action", "") not in ["add", "remove"]:
         await request_log(req, False, "", jsonlib.dumps({"error": "UnrecognizedAction"}))
-        return json({"error": "UnrecognizedAction"}, 204)
+        return json({"error": "UnrecognizedAction"}, 400)
     else:
         if req.args.get("action", "") == "add":
-            if id_user not in shared.force_muted:
+            if id_user not in shared.force_muted and id_user not in shared.whitelist:
                 done = True
                 shared.force_muted.append(id_user)
         else:
-            if id_user not in shared.force_muted:
+            if id_user in shared.force_muted and id_user not in shared.whitelist:
                 done = True
                 shared.force_muted.remove(id_user)
         await request_log(req, True, jsonlib.dumps({"action": req.args.get("action", ""), "done": done}), "")

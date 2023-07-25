@@ -4,6 +4,7 @@ from functools import wraps
 from typing import Optional
 
 import jwt
+import requests
 from dotenv import load_dotenv
 from sanic import Request
 from sanic.response import json
@@ -45,6 +46,29 @@ async def check_token(request: Request) -> Optional[str]:
         return None
 
 
+async def get_ext_info(req: Request):
+    auth: str = req.headers.getone("Authorization")
+    auth = auth.replace("Bearer ", "").replace("Token ", "")
+    for key in shared.public_keys:
+        try:
+            # decode returns the claims that has the email when needed
+            decoded = jwt.decode(auth, key=key, audience=os.environ.get('CF_AUD'), algorithms=['RS256'])
+            if decoded["identity_nonce"] not in shared.cached_ext.keys():
+                identity = requests.get(
+                    f"https://{os.environ.get('CF_URL')}/cdn-cgi/access/get-identity",
+                    headers={"Cookie": f"CF_Authorization={auth}"}
+                ).json()
+                req.ctx.name = identity["name"]
+                req.ctx.groups = identity["groups"]
+                shared.cached_ext[decoded["identity_nonce"]] = identity
+            else:
+                identity = shared.cached_ext[decoded["identity_nonce"]]
+                req.ctx.name = identity["name"]
+                req.ctx.groups = identity["groups"]
+        except:
+            pass
+
+
 def auth_check(wrapped):
     def decorator(f):
         @wraps(f)
@@ -53,6 +77,7 @@ def auth_check(wrapped):
 
             if is_authenticated is not None or not shared.ENABLE_CF_AUTH:
                 request.ctx.email = is_authenticated
+                await get_ext_info(request) if shared.ENABLE_CF_AUTH else None
                 response = await f(request, *args, **kwargs)
                 return response
             else:

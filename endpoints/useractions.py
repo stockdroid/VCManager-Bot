@@ -5,6 +5,7 @@ from sanic_ext.extensions.openapi import openapi
 
 import shared
 from ext.auth_check import auth_check
+from ext.get_user import get_user
 from ext.log_helper import request_log
 from shared import call_py, tg_app
 import json as jsonlib
@@ -14,10 +15,10 @@ useractionsbp = Blueprint("useractionsbp")
 
 @useractionsbp.post("/mute/<id_user:int>")
 @openapi.secured("token")
+@openapi.response(200, {"application/json": {"muted": True}})
+@openapi.response(401, {"application/json": {"error": "UNAUTHORIZED"}})
+@openapi.response(422, {"application/json": {"error": "PEER_ID_INVALID"}})
 @auth_check
-@openapi.response(200, '{"muted": True}')
-@openapi.response(401, '{"error": "UNAUTHORIZED"}')
-@openapi.response(422, '{"error": "PEER_ID_INVALID"}')
 async def mute_user(req: Request, id_user: int):
     voice_chat = call_py.full_chat.call
     try:
@@ -39,10 +40,10 @@ async def mute_user(req: Request, id_user: int):
 
 @useractionsbp.post("/allow/<id_user:int>")
 @openapi.secured("token")
+@openapi.response(200, {"application/json": {"unmuted": True}})
+@openapi.response(401, {"application/json": {"error": "UNAUTHORIZED"}})
+@openapi.response(422, {"application/json": {"error": "PEER_ID_INVALID"}})
 @auth_check
-@openapi.response(200, '{"unmuted": True}')
-@openapi.response(401, '{"error": "UNAUTHORIZED"}')
-@openapi.response(422, '{"error": "PEER_ID_INVALID"}')
 async def unmute_user(req: Request, id_user: int):
     voice_chat = call_py.full_chat.call
     try:
@@ -64,11 +65,11 @@ async def unmute_user(req: Request, id_user: int):
 
 @useractionsbp.post("/volume/<id_user:int>")
 @openapi.secured("token")
-@auth_check
-@openapi.response(200, '{"volume": <vol>}')
 @openapi.parameter('volume', int)
-@openapi.response(401, '{"error": "UNAUTHORIZED"}')
-@openapi.response(422, '{"error": "PEER_ID_INVALID"}')
+@openapi.response(200, {"application/json": {"volume": 100}})
+@openapi.response(401, {"application/json": {"error": "UNAUTHORIZED"}})
+@openapi.response(422, {"application/json": {"error": "PEER_ID_INVALID"}})
+@auth_check
 async def set_volume(req: Request, id_user: int):
     voice_chat = call_py.full_chat.call
     try:

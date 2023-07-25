@@ -56,3 +56,5 @@ time_started = 0
 time_at_pause = 0
 
 public_keys = []
+
+cached_ext = {}
