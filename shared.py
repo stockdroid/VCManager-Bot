@@ -3,6 +3,7 @@ import os
 from dotenv import load_dotenv
 from pyrogram import Client
 from pytgcalls import GroupCallFactory
+from sanic import Websocket
 
 load_dotenv()
 
@@ -43,6 +44,8 @@ DEF_WHITELIST = [
 whitelist = DEF_WHITELIST
 def2_whitelist = DEF_WHITELIST
 unmuted_list = []
+unmuted_ghost_list = []
+joined_list = []
 force_muted = []
 
 PHONE_NUMBER = os.environ.get(f"PHONE{'_DEV' if DEV_MODE else ''}")
@@ -58,3 +61,5 @@ time_at_pause = 0
 public_keys = []
 
 cached_ext = {}
+
+ws_list: list[Websocket] = []

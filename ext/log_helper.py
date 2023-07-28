@@ -1,11 +1,12 @@
-import asyncio
+# 104 righe
+import json
 import os
 import time
 
 from dotenv import load_dotenv
 from sanic.request import Request
 
-from shared import tg_app, DEV_MODE
+from shared import tg_app, DEV_MODE, ws_list
 
 load_dotenv()
 
@@ -44,10 +45,21 @@ async def part_change_log(joined: bool, id: int, username: str, name: str):
     to_return += f"Name: {name}\n"
     to_return += f"Timestamp: {int(time.time())}\n"
 
+    for ws in ws_list:
+        await ws.send(
+            json.dumps({
+                "action": f"{'JOIN' if joined else 'QUIT'}_VC",
+                "data": {
+                    "user_id": id,
+                    "username": username
+                }
+            })
+        )
+
     await _send_log_msg(to_return)
 
 
-def vc_action_log(muted: bool, id: int, username: str, name: str):
+async def vc_action_log(muted: bool, id: int, username: str, name: str):
     to_return = f"#{'muted' if muted else 'unmuted'}, #user{id}\n\n"
 
     to_return += f"Muted: {'yes' if muted else 'no'}\n"
@@ -56,7 +68,18 @@ def vc_action_log(muted: bool, id: int, username: str, name: str):
     to_return += f"Name: {name}\n"
     to_return += f"Timestamp: {int(time.time())}\n"
 
-    asyncio.run(_send_log_msg(to_return))
+    for ws in ws_list:
+        await ws.send(
+            json.dumps({
+                "action": f"{'MUTE' if muted else 'UNMUTE'}_USER",
+                "data": {
+                    "user_id": id,
+                    "username": username
+                }
+            })
+        )
+
+    await _send_log_msg(to_return)
 
 
 async def play_ended_log():

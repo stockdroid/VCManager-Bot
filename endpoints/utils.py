@@ -148,6 +148,7 @@ async def get_user_roles(req: Request):
         await request_log(req, True, jsonlib.dumps({"roles": req.ctx.groups}), "")
         return json({"roles": req.ctx.groups})
 
+
 @utilsbp.get("/gworkspace/name")
 @openapi.secured("token")
 @openapi.response(200, {"application/json": {"name": "realname"}})

@@ -1,3 +1,4 @@
+import json
 from typing import List
 
 import pyrogram
@@ -24,10 +25,29 @@ async def part_change(context: GroupCall, participants: List[GroupCallParticipan
                 name = str(member.user.first_name or "") + str(member.user.last_name or "")
 
         peer = await app.resolve_peer(uname)
+
+        if not participants[0].left and \
+                not participants[0].just_joined and \
+                participants[0].peer.user_id in shared.whitelist:
+            if participants[0].muted:
+                shared.unmuted_ghost_list.remove(participants[0].peer.user_id)
+            else:
+                shared.unmuted_ghost_list.append(participants[0].peer.user_id)
+            for ws in shared.ws_list:
+                await ws.send(
+                    json.dumps({
+                        "action": f"{'MUTE' if participants[0].muted else 'UNMUTE'}_USER",
+                        "data": {
+                            "user_id": participants[0].peer.user_id,
+                            "username": uname
+                        }
+                    })
+                )
+
         if not participants[0].left and \
                 not participants[0].is_self and \
                 participants[0].raise_hand_rating is None and \
-                participants[0].peer.user_id not in unmuted_list and \
+                participants[0].peer.user_id not in shared.unmuted_ghost_list and \
                 participants[0].peer.user_id not in shared.whitelist and \
                 participants[0].peer.user_id not in shared.force_muted:
             await app.invoke(EditGroupCallParticipant(
@@ -35,13 +55,14 @@ async def part_change(context: GroupCall, participants: List[GroupCallParticipan
                 participant=peer,
                 muted=True
             ))
-            vc_action_log(True, peer.user_id, uname, name)
+            await vc_action_log(True, peer.user_id, uname, name)
 
         if not participants[0].left and \
-                not participants[0].is_self and \
                 participants[0].raise_hand_rating is None and \
-                participants[0].peer.user_id not in unmuted_list:
+                participants[0].peer.user_id not in shared.unmuted_ghost_list and \
+                participants[0].peer.user_id not in shared.joined_list:
             await part_change_log(True, peer.user_id, uname, name)
+            shared.joined_list.append(participants[0].peer.user_id)
 
         if participants[0].raise_hand_rating is not None:  # è giusto?
             group_call: InputGroupCall = context.full_chat.call
@@ -52,16 +73,19 @@ async def part_change(context: GroupCall, participants: List[GroupCallParticipan
                 if not participant.muted and participant.peer.user_id not in shared.whitelist:
                     if participant.peer.user_id not in unmuted_list:
                         unmuted_list.append(participant.peer.user_id)
+                if participant.peer.user_id not in shared.unmuted_ghost_list:
+                    shared.unmuted_ghost_list.append(participant.peer.user_id)
 
             if (len(unmuted_list) - 1 < shared.limit or participants[0].peer.user_id in shared.whitelist) and \
                     participants[0].peer.user_id not in shared.force_muted:
                 unmuted_list.append(peer.user_id)
+                shared.unmuted_ghost_list.append(peer.user_id)
                 await app.invoke(EditGroupCallParticipant(
                     call=context.full_chat.call,
                     participant=peer,
                     muted=False
                 ))
-                vc_action_log(False, peer.user_id, uname, name)
+                await vc_action_log(False, peer.user_id, uname, name)
 
             else:
                 if participants[0].peer.user_id not in shared.muted_queue \
@@ -70,8 +94,11 @@ async def part_change(context: GroupCall, participants: List[GroupCallParticipan
 
         elif participants[0].left:
             await part_change_log(False, peer.user_id, uname, name)
+            if peer.user_id in shared.joined_list:
+                shared.joined_list.remove(peer.user_id)
             try:
                 unmuted_list.remove(peer.user_id)
+                shared.unmuted_ghost_list.remove(peer.user_id)
             except ValueError:
                 pass
             # ricontrollo, in caso di doppio update, se il limite è raggiunto
@@ -84,14 +111,16 @@ async def part_change(context: GroupCall, participants: List[GroupCallParticipan
                 if not participant.muted and participant.peer.user_id not in shared.whitelist:
                     if participant.peer.user_id not in unmuted_list:
                         unmuted_list.append(participant.peer.user_id)
+                        shared.unmuted_ghost_list.append(participant.peer.user_id)
 
             if len(shared.muted_queue) != 0 and len(unmuted_list) - 1 < shared.limit:
                 to_unmute = shared.muted_queue[0]
                 shared.muted_queue.pop(0)
                 unmuted_list.append(to_unmute.user_id)
+                shared.unmuted_ghost_list.append(to_unmute.user_id)
                 await app.invoke(EditGroupCallParticipant(
                     call=context.full_chat.call,
                     participant=to_unmute,
                     muted=False
                 ))
-                vc_action_log(False, peer.user_id, uname, name)
+                await vc_action_log(False, peer.user_id, uname, name)

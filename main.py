@@ -2,7 +2,6 @@ import json
 import os
 import threading
 
-import jwt
 import requests
 import uvicorn
 from dotenv import load_dotenv
@@ -12,9 +11,7 @@ from pyrogram.handlers import MessageHandler
 from pyrogram.raw.base import Update
 from pyrogram.raw.types import UpdateNewChannelMessage, MessageService, MessageActionGroupCall
 from sanic import Sanic
-from sanic_ext import Extend
 
-import endpoints.root
 import shared
 from commands.movetotop import movetotop
 from commands.setlimit import setlimit
@@ -23,12 +20,15 @@ from endpoints.forcedmute import forcedmutesbp
 from endpoints.limits import limitsbp
 from endpoints.play import playbp
 from endpoints.queue import queuebp
+from endpoints.root import rootBp
 from endpoints.useractions import useractionsbp
 from endpoints.utils import utilsbp
 from endpoints.voicechat import voicechatbp
 from endpoints.whitelist import whitelistbp
+from events.net_change import net_change
 from events.play_ended import play_ended
 from events.vc_part_change import part_change
+from ext.ws_stream import ws_bp
 from shared import call_py, tg_app
 
 api = Sanic.get_app("vcmanApi", force_create=True)
@@ -52,7 +52,8 @@ if shared.COMMANDS_ENABLED:
     ), shared.GROUP_ID)
 
 blueprints = [
-    endpoints.root.rootBp, limitsbp, queuebp, useractionsbp, whitelistbp, utilsbp, playbp, forcedmutesbp, voicechatbp
+    rootBp, limitsbp, queuebp, useractionsbp, whitelistbp,
+    utilsbp, playbp, forcedmutesbp, voicechatbp, ws_bp
 ]
 for blueprint in blueprints:
     api.blueprint(blueprint)
@@ -60,7 +61,7 @@ for blueprint in blueprints:
 
 call_py.on_participant_list_updated(part_change)
 call_py.on_playout_ended(play_ended)
-
+call_py.on_network_status_changed(net_change)
 
 @tg_app.on_raw_update(group=shared.GROUP_ID)
 async def raw(_, update: Update, __, chats: dict):
@@ -92,7 +93,7 @@ else:
     print("Auth disabled, this api is open without authorization!")
 
 if __name__ == "__main__":
-    config = uvicorn.Config("main:api", host="0.0.0.0", port=5889, log_level="debug", use_colors=True, reload=True)
+    config = uvicorn.Config("main:api", host="0.0.0.0", port=5889, use_colors=True, reload=True)
     server = uvicorn.Server(config)
 
     tg_app.start()
