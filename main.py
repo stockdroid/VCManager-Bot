@@ -63,6 +63,7 @@ call_py.on_participant_list_updated(part_change)
 call_py.on_playout_ended(play_ended)
 call_py.on_network_status_changed(net_change)
 
+
 @tg_app.on_raw_update(group=shared.GROUP_ID)
 async def raw(_, update: Update, __, chats: dict):
     if type(update) == UpdateNewChannelMessage and int(str(shared.GROUP_ID).replace("-100", "")) in chats.keys():

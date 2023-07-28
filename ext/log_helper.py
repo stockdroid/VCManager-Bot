@@ -36,7 +36,7 @@ def _gen_log_txt(
     return to_return
 
 
-async def part_change_log(joined: bool, id: int, username: str, name: str):
+async def part_change_log(joined: bool, id: int, username: str, name: str, last_name: str):
     to_return = f"#{'join' if joined else 'quit'}, #user{id}\n\n"
 
     to_return += f"Joined: {'yes' if joined else 'no'}\n"
@@ -51,7 +51,9 @@ async def part_change_log(joined: bool, id: int, username: str, name: str):
                 "action": f"{'JOIN' if joined else 'QUIT'}_VC",
                 "data": {
                     "user_id": id,
-                    "username": username
+                    "username": username,
+                    "first_name": name,
+                    "last_name": last_name
                 }
             })
         )
@@ -59,7 +61,7 @@ async def part_change_log(joined: bool, id: int, username: str, name: str):
     await _send_log_msg(to_return)
 
 
-async def vc_action_log(muted: bool, id: int, username: str, name: str):
+async def vc_action_log(muted: bool, id: int, username: str, name: str, last_name: str):
     to_return = f"#{'muted' if muted else 'unmuted'}, #user{id}\n\n"
 
     to_return += f"Muted: {'yes' if muted else 'no'}\n"
@@ -74,7 +76,9 @@ async def vc_action_log(muted: bool, id: int, username: str, name: str):
                 "action": f"{'MUTE' if muted else 'UNMUTE'}_USER",
                 "data": {
                     "user_id": id,
-                    "username": username
+                    "username": username,
+                    "first_name": name,
+                    "last_name": last_name
                 }
             })
         )

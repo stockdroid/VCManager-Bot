@@ -18,11 +18,13 @@ async def part_change(context: GroupCall, participants: List[GroupCallParticipan
     if context.full_chat.id == int(str(shared.GROUP_ID).replace("-100", "")):
         uname = ""
         name = ""
+        last_name = ""
 
         async for member in app.get_chat_members(shared.GROUP_ID):
             if member.user.id == participants[0].peer.user_id:
                 uname = member.user.username
-                name = str(member.user.first_name or "") + str(member.user.last_name or "")
+                name = str(member.user.first_name or "")
+                last_name = str(member.user.last_name or "")
 
         peer = await app.resolve_peer(uname)
 
@@ -55,13 +57,13 @@ async def part_change(context: GroupCall, participants: List[GroupCallParticipan
                 participant=peer,
                 muted=True
             ))
-            await vc_action_log(True, peer.user_id, uname, name)
+            await vc_action_log(True, peer.user_id, uname, name, last_name)
 
         if not participants[0].left and \
                 participants[0].raise_hand_rating is None and \
                 participants[0].peer.user_id not in shared.unmuted_ghost_list and \
                 participants[0].peer.user_id not in shared.joined_list:
-            await part_change_log(True, peer.user_id, uname, name)
+            await part_change_log(True, peer.user_id, uname, name, last_name)
             shared.joined_list.append(participants[0].peer.user_id)
 
         if participants[0].raise_hand_rating is not None:  # è giusto?
@@ -85,7 +87,7 @@ async def part_change(context: GroupCall, participants: List[GroupCallParticipan
                     participant=peer,
                     muted=False
                 ))
-                await vc_action_log(False, peer.user_id, uname, name)
+                await vc_action_log(False, peer.user_id, uname, name, last_name)
 
             else:
                 if participants[0].peer.user_id not in shared.muted_queue \
@@ -93,7 +95,7 @@ async def part_change(context: GroupCall, participants: List[GroupCallParticipan
                     shared.muted_queue.append(peer)
 
         elif participants[0].left:
-            await part_change_log(False, peer.user_id, uname, name)
+            await part_change_log(False, peer.user_id, uname, name, last_name)
             if peer.user_id in shared.joined_list:
                 shared.joined_list.remove(peer.user_id)
             try:
@@ -123,4 +125,4 @@ async def part_change(context: GroupCall, participants: List[GroupCallParticipan
                     participant=to_unmute,
                     muted=False
                 ))
-                await vc_action_log(False, peer.user_id, uname, name)
+                await vc_action_log(False, peer.user_id, uname, name, last_name)
