@@ -31,6 +31,16 @@ async def play_audio(req: Request, file_name: str):
             shared.time_started = time.time()
             call_py.play_on_repeat = False
             await request_log(req, True, jsonlib.dumps({"playing": True}), "")
+            for ws in shared.ws_list:
+                await ws.send(
+                    jsonlib.dumps({
+                        "action": f"AUDIO_STATE_UPDATE",
+                        "data": {
+                            "state": "PLAY",
+                            "seconds": 0
+                        }
+                    })
+                )
             return json({"playing": True})
         except CallBeforeStartError:
             await request_log(req, True, "", jsonlib.dumps({"error": "NotInVC"}))
@@ -89,6 +99,16 @@ async def pause_audio(req: Request):
     call_py.pause_playout()
     shared.time_at_pause = time.time() - shared.time_started
     await request_log(req, True, jsonlib.dumps({"playing": False}), "")
+    for ws in shared.ws_list:
+        await ws.send(
+            jsonlib.dumps({
+                "action": f"AUDIO_STATE_UPDATE",
+                "data": {
+                    "state": "PAUSE",
+                    "seconds": shared.time_at_pause
+                }
+            })
+        )
     return json({"playing": False})
 
 
@@ -103,4 +123,14 @@ async def resume_audio(req: Request):
         shared.time_started = time.time() - shared.time_at_pause
         shared.time_at_pause = 0
     await request_log(req, True, jsonlib.dumps({"playing": True}), "")
+    for ws in shared.ws_list:
+        await ws.send(
+            jsonlib.dumps({
+                "action": f"AUDIO_STATE_UPDATE",
+                "data": {
+                    "state": "RESUME",
+                    "seconds": shared.time_started
+                }
+            })
+        )
     return json({"playing": True})
