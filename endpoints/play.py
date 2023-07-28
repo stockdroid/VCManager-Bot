@@ -37,7 +37,8 @@ async def play_audio(req: Request, file_name: str):
                         "action": f"AUDIO_STATE_UPDATE",
                         "data": {
                             "state": "PLAY",
-                            "seconds": 0
+                            "seconds": 0,
+                            "filename": call_py.input_filename.replace("./audio/", "").replace(".audio", "")
                         }
                     })
                 )
@@ -105,7 +106,8 @@ async def pause_audio(req: Request):
                 "action": f"AUDIO_STATE_UPDATE",
                 "data": {
                     "state": "PAUSE",
-                    "seconds": shared.time_at_pause
+                    "seconds": shared.time_at_pause,
+                    "filename": call_py.input_filename.replace("./audio/", "").replace(".audio", "")
                 }
             })
         )
@@ -129,7 +131,8 @@ async def resume_audio(req: Request):
                 "action": f"AUDIO_STATE_UPDATE",
                 "data": {
                     "state": "RESUME",
-                    "seconds": shared.time_started
+                    "seconds": shared.time_started,
+                    "filename": call_py.input_filename.replace("./audio/", "").replace(".audio", "")
                 }
             })
         )
