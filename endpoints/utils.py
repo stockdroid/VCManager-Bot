@@ -71,7 +71,7 @@ async def resolve(req: Request, username: str):
 @auth_check
 async def info(req: Request, user_id: int):
     user = await get_user(user_id)
-    await request_log(req, True, jsonlib.dumps(user), "")
+    await request_log(req, True, jsonlib.dumps(str(user)), "")
     return json({"user_id": user.id, "info": jsonlib.loads(str(user))})
 
 
