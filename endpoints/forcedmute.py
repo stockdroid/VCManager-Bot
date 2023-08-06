@@ -1,3 +1,5 @@
+import asyncio
+
 from sanic import Blueprint, Request, json
 from sanic_ext import openapi
 
@@ -15,7 +17,7 @@ forcedmutesbp = Blueprint("forcedmutes")
 @openapi.response(200, {"application/json": {"forcedmutes": [777000, 12345]}})
 @auth_check
 async def get_forcedmutes(req: Request):
-    await request_log(req, True, jsonlib.dumps({"forcedmutes": shared.force_muted}), "")
+    asyncio.create_task(request_log(req, True, jsonlib.dumps({"forcedmutes": shared.force_muted}), ""))
     return json({"forcedmutes": shared.force_muted})
 
 
@@ -25,7 +27,7 @@ async def get_forcedmutes(req: Request):
 @openapi.response(200, {"application/json": {"inforcedmutes": True}})
 @auth_check
 async def get_in_forcedmutes(req: Request, id_user: int):
-    await request_log(req, True, jsonlib.dumps({"inforcedmutes": id_user in shared.force_muted}), "")
+    asyncio.create_task(request_log(req, True, jsonlib.dumps({"inforcedmutes": id_user in shared.force_muted}), ""))
     return json({"inforcedmutes": id_user in shared.force_muted})
 
 
@@ -40,7 +42,7 @@ async def get_in_forcedmutes(req: Request, id_user: int):
 async def action_forcedmutes(req: Request, id_user: int):
     done = False
     if req.args.get("action", "") not in ["add", "remove"]:
-        await request_log(req, False, "", jsonlib.dumps({"error": "UnrecognizedAction"}))
+        asyncio.create_task(request_log(req, False, "", jsonlib.dumps({"error": "UnrecognizedAction"})))
         return json({"error": "UnrecognizedAction"}, 400)
     else:
         if req.args.get("action", "") == "add":
@@ -51,5 +53,5 @@ async def action_forcedmutes(req: Request, id_user: int):
             if id_user in shared.force_muted and id_user not in shared.whitelist:
                 done = True
                 shared.force_muted.remove(id_user)
-        await request_log(req, True, jsonlib.dumps({"action": req.args.get("action", ""), "done": done}), "")
+        asyncio.create_task(request_log(req, True, jsonlib.dumps({"action": req.args.get("action", ""), "done": done}), ""))
         return json({"action": req.args.get("action", ""), "done": done})

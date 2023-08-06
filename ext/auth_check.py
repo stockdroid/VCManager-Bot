@@ -18,7 +18,7 @@ load_dotenv()
 async def check_token(request: Request) -> Optional[str]:
     if shared.ENABLE_CF_AUTH:
         try:
-            auth: str = request.headers.getone("Authorization")
+            auth: str = request.args.get("authorization") or request.headers.getone("Authorization")
             auth = auth.replace("Bearer ", "").replace("Token ", "")
         except KeyError:
             await auth_error("NA", request.url, request.method, "NO_AUTH_TOKEN")
@@ -38,7 +38,6 @@ async def check_token(request: Request) -> Optional[str]:
                         return None
                     else:
                         return email
-                break
             except:
                 pass
         return None
@@ -47,7 +46,7 @@ async def check_token(request: Request) -> Optional[str]:
 
 
 async def get_ext_info(req: Request):
-    auth: str = req.headers.getone("Authorization")
+    auth: str = req.args.get("authorization") or req.headers.getone("Authorization")
     auth = auth.replace("Bearer ", "").replace("Token ", "")
     for key in shared.public_keys:
         try:

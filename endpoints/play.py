@@ -1,3 +1,4 @@
+import asyncio
 import os
 import time
 
@@ -22,7 +23,7 @@ playbp = Blueprint("playbp")
 @auth_check
 async def play_audio(req: Request, file_name: str):
     if os.path.isfile(f"./audio/{file_name}.audio") is False:
-        await request_log(req, False, "", jsonlib.dumps({"error": "FileNotFound"}))
+        asyncio.create_task(request_log(req, False, "", jsonlib.dumps({"error": "FileNotFound"})))
         return json({"error": "FileNotFound"}, status=400)
     else:
         try:
@@ -30,7 +31,7 @@ async def play_audio(req: Request, file_name: str):
             call_py.restart_playout()
             shared.time_started = time.time()
             call_py.play_on_repeat = False
-            await request_log(req, True, jsonlib.dumps({"playing": True}), "")
+            asyncio.create_task(request_log(req, True, jsonlib.dumps({"playing": True}), ""))
             for ws in shared.ws_list:
                 await ws.send(
                     jsonlib.dumps({
@@ -44,7 +45,7 @@ async def play_audio(req: Request, file_name: str):
                 )
             return json({"playing": True})
         except CallBeforeStartError:
-            await request_log(req, True, "", jsonlib.dumps({"error": "NotInVC"}))
+            asyncio.create_task(request_log(req, True, "", jsonlib.dumps({"error": "NotInVC"})))
             return json({"error": "NotInVC"}, 406)
 
 
@@ -54,7 +55,7 @@ async def play_audio(req: Request, file_name: str):
 @auth_check
 async def list_files(req: Request):
     files_list = os.listdir("./audio")
-    await request_log(req, True, jsonlib.dumps({"filenames": files_list}), "")
+    asyncio.create_task(request_log(req, True, jsonlib.dumps({"filenames": files_list}), ""))
     return json({"filenames": files_list})
 
 
@@ -65,7 +66,7 @@ async def list_files(req: Request):
 @auth_check
 async def audio_duration(req: Request, file_name: str):
     if os.path.isfile(f"./audio/{file_name}.audio") is False:
-        await request_log(req, False, "", jsonlib.dumps({"error": "FileNotFound"}))
+        asyncio.create_task(request_log(req, False, "", jsonlib.dumps({"error": "FileNotFound"})))
         return json({"error": "FileNotFound"}, status=400)
     else:
         size = os.path.getsize(f"./audio/{file_name}.audio")
@@ -73,7 +74,7 @@ async def audio_duration(req: Request, file_name: str):
         NUM_CHANNELS = 2
         SAMPLE_RATE = 48000
         duration = size / (NUM_CHANNELS * SAMPLE_RATE * (BIT_DEPTH / 8))
-        await request_log(req, True, jsonlib.dumps({"duration": duration}), "")
+        asyncio.create_task(request_log(req, True, jsonlib.dumps({"duration": duration}), ""))
         return json({"duration": duration})
 
 
@@ -87,7 +88,7 @@ async def play_status(req: Request):
         time_elapsed = shared.time_at_pause
     else:
         time_elapsed = time.time() - shared.time_started
-    await request_log(req, True, jsonlib.dumps({"elapsed": time_elapsed if (time_elapsed < 100000) else None}), "")
+    asyncio.create_task(request_log(req, True, jsonlib.dumps({"elapsed": time_elapsed if (time_elapsed < 100000) else None}), ""))
     return json({"elapsed": time_elapsed if (time_elapsed < 100000) else None})
 
 
@@ -99,7 +100,7 @@ async def play_status(req: Request):
 async def pause_audio(req: Request):
     call_py.pause_playout()
     shared.time_at_pause = time.time() - shared.time_started
-    await request_log(req, True, jsonlib.dumps({"playing": False}), "")
+    asyncio.create_task(request_log(req, True, jsonlib.dumps({"playing": False}), ""))
     for ws in shared.ws_list:
         await ws.send(
             jsonlib.dumps({
@@ -124,7 +125,7 @@ async def resume_audio(req: Request):
     if shared.time_at_pause != 0:
         shared.time_started = time.time() - shared.time_at_pause
         shared.time_at_pause = 0
-    await request_log(req, True, jsonlib.dumps({"playing": True}), "")
+    asyncio.create_task(request_log(req, True, jsonlib.dumps({"playing": True}), ""))
     for ws in shared.ws_list:
         await ws.send(
             jsonlib.dumps({

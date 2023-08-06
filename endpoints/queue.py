@@ -1,3 +1,5 @@
+import asyncio
+
 from sanic import Blueprint, Request, json
 from sanic_ext import openapi
 
@@ -16,7 +18,7 @@ queuebp = Blueprint("queue")
 @openapi.response(200, {"application/json": {"queue": [777000, 123456]}})
 @auth_check
 async def get_queue(req: Request):
-    await request_log(req, True, jsonlib.dumps({"queue": shared.muted_queue}), "")
+    asyncio.create_task(request_log(req, True, jsonlib.dumps({"queue": shared.muted_queue}), ""))
     return json({"queue": shared.muted_queue})
 
 
@@ -30,7 +32,7 @@ async def get_queue_index(req: Request, id_user: int):
         queue_index = shared.muted_queue.index(id_user)
     except ValueError:
         queue_index = None
-    await request_log(req, True, jsonlib.dumps({"queuepos": queue_index}), "")
+    asyncio.create_task(request_log(req, True, jsonlib.dumps({"queuepos": queue_index}), ""))
     return json({"queuepos": queue_index})
 
 
@@ -44,5 +46,5 @@ async def set_queue_index(req: Request, id_user: int):
     new_index = int(req.args.get("index", shared.muted_queue.index(id_user)))
     shared.muted_queue.remove(id_user)
     shared.muted_queue.insert(new_index, id_user)
-    await request_log(req, True, jsonlib.dumps({"queuepos": new_index}), "")
+    asyncio.create_task(request_log(req, True, jsonlib.dumps({"queuepos": new_index}), ""))
     return json({"queuepos": new_index})

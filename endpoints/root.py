@@ -1,3 +1,5 @@
+import asyncio
+
 from sanic import Blueprint, Request, text
 from sanic_ext.extensions.openapi import openapi
 
@@ -16,5 +18,5 @@ rootBp = Blueprint("root")
 @openapi.secured("token")
 @auth_check
 async def read_root(req: Request):
-    await request_log(req, True, "non dovresti essere qua...", "")
+    asyncio.create_task(request_log(req, True, "non dovresti essere qua...", ""))
     return text("non dovresti essere qua...")

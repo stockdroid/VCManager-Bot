@@ -1,3 +1,5 @@
+import asyncio
+
 from sanic import Blueprint, Request, json
 from sanic_ext.extensions.openapi import openapi
 
@@ -16,7 +18,7 @@ limitsbp = Blueprint("limits")
 @openapi.secured("token")
 @auth_check
 async def getLimits(req: Request):
-    await request_log(req, True, jsonlib.dumps({"currlimit": shared.limit, "deflimit": shared.DEF_LIMIT}), "")
+    asyncio.create_task(request_log(req, True, jsonlib.dumps({"currlimit": shared.limit, "deflimit": shared.DEF_LIMIT}), ""))
     return json({"currlimit": shared.limit, "deflimit": shared.DEF_LIMIT})
 
 
@@ -30,5 +32,5 @@ async def setLimits(req: Request):
     limit = int(req.args.get("limit", shared.limit))
     ex_limit = shared.limit
     shared.limit = limit
-    await request_log(req, True, jsonlib.dumps({"currlimit": shared.limit, "exlimit": ex_limit, "deflimit": shared.DEF_LIMIT}), "")
+    asyncio.create_task(request_log(req, True, jsonlib.dumps({"currlimit": shared.limit, "exlimit": ex_limit, "deflimit": shared.DEF_LIMIT}), ""))
     return json({"currlimit": shared.limit, "exlimit": ex_limit, "deflimit": shared.DEF_LIMIT})

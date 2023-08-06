@@ -1,3 +1,5 @@
+import asyncio
+
 from pyrogram.errors import PeerIdInvalid
 from pyrogram.raw.functions.phone import EditGroupCallParticipant
 from sanic import Blueprint, Request, json
@@ -31,10 +33,10 @@ async def mute_user(req: Request, id_user: int):
         )
         if id_user not in shared.force_muted:
             shared.force_muted.append(id_user)
-        await request_log(req, True, jsonlib.dumps({"muted": True}), "")
+        asyncio.create_task(request_log(req, True, jsonlib.dumps({"muted": True}), ""))
         return json({"muted": True})
     except PeerIdInvalid:
-        await request_log(req, False, "", jsonlib.dumps({"error": "PEER_ID_INVALID"}))
+        asyncio.create_task(request_log(req, False, "", jsonlib.dumps({"error": "PEER_ID_INVALID"})))
         return json({"error": "PEER_ID_INVALID"}, 422)
 
 
@@ -56,10 +58,10 @@ async def unmute_user(req: Request, id_user: int):
         )
         if id_user in shared.force_muted:
             shared.force_muted.remove(id_user)
-        await request_log(req, True, jsonlib.dumps({"muted": False}), "")
+        asyncio.create_task(request_log(req, True, jsonlib.dumps({"muted": False}), ""))
         return json({"muted": False})
     except PeerIdInvalid:
-        await request_log(req, False, "", jsonlib.dumps({"error": "PEER_ID_INVALID"}))
+        asyncio.create_task(request_log(req, False, "", jsonlib.dumps({"error": "PEER_ID_INVALID"})))
         return json({"error": "PEER_ID_INVALID"}, 422)
 
 
@@ -80,8 +82,8 @@ async def set_volume(req: Request, id_user: int):
                 volume=int(req.args.get("volume", 100))
             )
         )
-        await request_log(req, True, jsonlib.dumps({"volume": int(req.args.get("volume", 100))}), "")
+        asyncio.create_task(request_log(req, True, jsonlib.dumps({"volume": int(req.args.get("volume", 100))}), ""))
         return json({"volume": int(req.args.get("volume", 100))})
     except PeerIdInvalid:
-        await request_log(req, False, "", jsonlib.dumps({"error": "PEER_ID_INVALID"}))
+        asyncio.create_task(request_log(req, False, "", jsonlib.dumps({"error": "PEER_ID_INVALID"})))
         return json({"error": "PEER_ID_INVALID"}, 422)
