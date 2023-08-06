@@ -4,6 +4,7 @@ from ext.audio_manager import AudioManager
 
 GO_SLEEP_DUR = AudioManager().audio_duration("sleep_begin")
 WAKE_UP_DUR = AudioManager().audio_duration("sleep_end")
+SLEEP_DURING_AUDIO_DUR = AudioManager().audio_duration("orgasm")
 
 
 def is_time_between(begin_time, end_time, check_time=None):
@@ -16,6 +17,6 @@ def is_time_between(begin_time, end_time, check_time=None):
 
 
 def while_sleeping():
-    if is_time_between(time(1, 40, int(GO_SLEEP_DUR)), time(1, 41, 60 - int(WAKE_UP_DUR))):
+    if is_time_between(time(1, 40, int(GO_SLEEP_DUR)), time(1, 41, 60 - int(SLEEP_DURING_AUDIO_DUR))):
         print("sleep sfx...")
         AudioManager().play("orgasm")
