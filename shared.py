@@ -55,9 +55,6 @@ API_HASH = os.environ.get(f"API_HASH")
 tg_app = Client("vcmanager", api_id=API_ID, api_hash=API_HASH, phone_number=PHONE_NUMBER)
 call_py = GroupCallFactory(tg_app).get_file_group_call()
 
-time_started = 0
-time_at_pause = 0
-
 public_keys = []
 
 cached_ext = {}

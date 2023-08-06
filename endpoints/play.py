@@ -7,6 +7,7 @@ from sanic import Blueprint, Request, json
 from sanic_ext.extensions.openapi import openapi
 
 import shared
+from ext.audio_manager import AudioManager
 from ext.auth_check import auth_check
 from ext.log_helper import request_log
 from shared import call_py
@@ -27,10 +28,7 @@ async def play_audio(req: Request, file_name: str):
         return json({"error": "FileNotFound"}, status=400)
     else:
         try:
-            call_py.input_filename = f"./audio/{file_name}.audio"
-            call_py.restart_playout()
-            shared.time_started = time.time()
-            call_py.play_on_repeat = False
+            AudioManager().play(file_name)
             asyncio.create_task(request_log(req, True, jsonlib.dumps({"playing": True}), ""))
             for ws in shared.ws_list:
                 await ws.send(
@@ -54,7 +52,7 @@ async def play_audio(req: Request, file_name: str):
 @openapi.response(200, {"application/json": {"filenames": []}})
 @auth_check
 async def list_files(req: Request):
-    files_list = os.listdir("./audio")
+    files_list = await AudioManager.list_files()
     asyncio.create_task(request_log(req, True, jsonlib.dumps({"filenames": files_list}), ""))
     return json({"filenames": files_list})
 
@@ -69,11 +67,7 @@ async def audio_duration(req: Request, file_name: str):
         asyncio.create_task(request_log(req, False, "", jsonlib.dumps({"error": "FileNotFound"})))
         return json({"error": "FileNotFound"}, status=400)
     else:
-        size = os.path.getsize(f"./audio/{file_name}.audio")
-        BIT_DEPTH = 16
-        NUM_CHANNELS = 2
-        SAMPLE_RATE = 48000
-        duration = size / (NUM_CHANNELS * SAMPLE_RATE * (BIT_DEPTH / 8))
+        duration = await AudioManager().audio_duration(file_name)
         asyncio.create_task(request_log(req, True, jsonlib.dumps({"duration": duration}), ""))
         return json({"duration": duration})
 
@@ -84,10 +78,7 @@ async def audio_duration(req: Request, file_name: str):
 @openapi.response(200, {"application/json": {"elapsed": 6}})
 @auth_check
 async def play_status(req: Request):
-    if shared.time_at_pause != 0:
-        time_elapsed = shared.time_at_pause
-    else:
-        time_elapsed = time.time() - shared.time_started
+    time_elapsed = await AudioManager().time_elapsed()
     asyncio.create_task(request_log(req, True, jsonlib.dumps({"elapsed": time_elapsed if (time_elapsed < 100000) else None}), ""))
     return json({"elapsed": time_elapsed if (time_elapsed < 100000) else None})
 
@@ -98,8 +89,7 @@ async def play_status(req: Request):
 @openapi.response(200, {"application/json": {"playing": False}})
 @auth_check
 async def pause_audio(req: Request):
-    call_py.pause_playout()
-    shared.time_at_pause = time.time() - shared.time_started
+    AudioManager().pause()
     asyncio.create_task(request_log(req, True, jsonlib.dumps({"playing": False}), ""))
     for ws in shared.ws_list:
         await ws.send(
@@ -107,7 +97,7 @@ async def pause_audio(req: Request):
                 "action": f"AUDIO_STATE_UPDATE",
                 "data": {
                     "state": "PAUSE",
-                    "seconds": shared.time_at_pause,
+                    "seconds": await AudioManager().time_elapsed(),
                     "filename": call_py.input_filename.replace("./audio/", "").replace(".audio", "")
                 }
             })
@@ -121,10 +111,7 @@ async def pause_audio(req: Request):
 @openapi.response(200, {"application/json": {"playing": True}})
 @auth_check
 async def resume_audio(req: Request):
-    call_py.resume_playout()
-    if shared.time_at_pause != 0:
-        shared.time_started = time.time() - shared.time_at_pause
-        shared.time_at_pause = 0
+    AudioManager().resume()
     asyncio.create_task(request_log(req, True, jsonlib.dumps({"playing": True}), ""))
     for ws in shared.ws_list:
         await ws.send(
@@ -132,7 +119,7 @@ async def resume_audio(req: Request):
                 "action": f"AUDIO_STATE_UPDATE",
                 "data": {
                     "state": "RESUME",
-                    "seconds": shared.time_started,
+                    "seconds": await AudioManager().time_elapsed(),
                     "filename": call_py.input_filename.replace("./audio/", "").replace(".audio", "")
                 }
             })

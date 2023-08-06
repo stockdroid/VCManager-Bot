@@ -28,6 +28,7 @@ from endpoints.whitelist import whitelistbp
 from events.net_change import net_change
 from events.play_ended import play_ended
 from events.vc_part_change import part_change
+from ext.scheduling_manager import init_schedule
 from ext.ws_stream import ws_bp
 from shared import call_py, tg_app
 
@@ -99,4 +100,5 @@ if __name__ == "__main__":
 
     tg_app.start()
     threading.Thread(target=server.run, daemon=True).start()
+    threading.Thread(target=init_schedule, daemon=True).start()
     idle()
