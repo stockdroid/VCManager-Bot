@@ -41,7 +41,7 @@ class AudioManager(object):
     async def list_files():
         return os.listdir("./audio")
 
-    async def audio_duration(self, filename: str):
+    def audio_duration(self, filename: str):
         size = os.path.getsize(f"./audio/{filename}.audio")
         return size / (self.NUM_CHANNELS * self.SAMPLE_RATE * (self.BIT_DEPTH / 8))
 
