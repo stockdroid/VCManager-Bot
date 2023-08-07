@@ -13,6 +13,7 @@ def go_to_sleep():
     participantstoloop: GroupParticipants = await tg_app.invoke(pyrogram.raw.functions.phone.GetGroupParticipants(
         call=group_call, ids=[], sources=[], offset="", limit=-1
     ))
+    shared.exforce_muted = shared.force_muted
     for participant in participantstoloop.participants:
         if not participant.muted and not participant.is_self:
             await tg_app.invoke(EditGroupCallParticipant(
@@ -21,5 +22,6 @@ def go_to_sleep():
                 muted=True
             ))
 
+            shared.force_muted.append(participant.peer.user_id)
     print("going to sleep...")
     AudioManager().play("sleep_begin")

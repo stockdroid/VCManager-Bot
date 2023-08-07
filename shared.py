@@ -47,6 +47,7 @@ unmuted_list = []
 unmuted_ghost_list = []
 joined_list = []
 force_muted = []
+exforce_muted = []
 
 PHONE_NUMBER = os.environ.get(f"PHONE{'_DEV' if DEV_MODE else ''}")
 API_ID = os.environ.get(f"API_ID")
