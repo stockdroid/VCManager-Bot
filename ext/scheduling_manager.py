@@ -9,9 +9,9 @@ from ext.audio_manager import AudioManager
 SLEEP_DURING_AUDIO_DUR = AudioManager().audio_duration("orgasm")
 
 # la gianpiertolda va a dormire alle 10 e si alza alle 8
-schedule.every().day.at("01:40").do(go_to_sleep)
+schedule.every().day.at("22:00").do(go_to_sleep)
 schedule.every(SLEEP_DURING_AUDIO_DUR + 0.5).seconds.do(while_sleeping)  # la funzione checka l'orario
-schedule.every().day.at("01:42").do(wake_up)
+schedule.every().day.at("08:00").do(wake_up)
 
 
 def init_schedule():
