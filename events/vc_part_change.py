@@ -20,11 +20,17 @@ async def part_change(context: GroupCall, participants: List[GroupCallParticipan
         name = ""
         last_name = ""
 
+        bot = await app.get_me()
+        bot_id = bot.id
+
         async for member in app.get_chat_members(shared.GROUP_ID):
             if member.user.id == participants[0].peer.user_id:
                 uname = member.user.username
                 name = str(member.user.first_name or "")
                 last_name = str(member.user.last_name or "")
+
+        if participants[0].peer.user_id == bot_id:
+            return
 
         peer = await app.resolve_peer(uname)
 
@@ -32,7 +38,8 @@ async def part_change(context: GroupCall, participants: List[GroupCallParticipan
                 not participants[0].just_joined and \
                 participants[0].peer.user_id in shared.whitelist:
             if participants[0].muted:
-                shared.unmuted_ghost_list.remove(participants[0].peer.user_id)
+                if participants[0].peer.user_id in shared.unmuted_ghost_list:
+                    shared.unmuted_ghost_list.remove(participants[0].peer.user_id)
             else:
                 shared.unmuted_ghost_list.append(participants[0].peer.user_id)
             for ws in shared.ws_list:
@@ -66,7 +73,7 @@ async def part_change(context: GroupCall, participants: List[GroupCallParticipan
             await part_change_log(True, peer.user_id, uname, name, last_name)
             shared.joined_list.append(participants[0].peer.user_id)
 
-        if participants[0].raise_hand_rating is not None:  # è giusto?
+        if participants[0].raise_hand_rating is not None:
             group_call: InputGroupCall = context.full_chat.call
             participants_to_loop = await app.invoke(pyrogram.raw.functions.phone.GetGroupParticipants(
                 call=group_call, ids=[], sources=[], offset="", limit=-1
@@ -99,12 +106,12 @@ async def part_change(context: GroupCall, participants: List[GroupCallParticipan
             if peer.user_id in shared.joined_list:
                 shared.joined_list.remove(peer.user_id)
             try:
-                unmuted_list.remove(peer.user_id)
-                shared.unmuted_ghost_list.remove(peer.user_id)
+                if peer.user_id in unmuted_list:
+                    unmuted_list.remove(peer.user_id)
+                if peer.user_id in shared.unmuted_ghost_list:
+                    shared.unmuted_ghost_list.remove(peer.user_id)
             except ValueError:
                 pass
-            # ricontrollo, in caso di doppio update, se il limite è raggiunto
-            # e uso una lista locale per evitare problemi
             group_call: InputGroupCall = context.full_chat.call
             participantstoloop = await app.invoke(pyrogram.raw.functions.phone.GetGroupParticipants(
                 call=group_call, ids=[], sources=[], offset="", limit=-1
