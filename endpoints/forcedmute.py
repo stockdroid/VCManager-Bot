@@ -4,13 +4,9 @@ from sanic import Blueprint, Request, json
 from sanic_ext import openapi
 
 import shared
-from shared import tg_app, call_py
 from ext.auth_check import auth_check
 from ext.log_helper import request_log
 import json as jsonlib
-
-from pyrogram.raw.functions.phone import EditGroupCallParticipant
-from pyrogram.raw.types import InputGroupCall
 
 forcedmutesbp = Blueprint("forcedmutes")
 
@@ -52,22 +48,10 @@ async def action_forcedmutes(req: Request, id_user: int):
         if req.args.get("action", "") == "add":
             if id_user not in shared.force_muted and id_user not in shared.whitelist:
                 done = True
-                group_call: InputGroupCall = call_py.full_chat.call
-                await tg_app.invoke(EditGroupCallParticipant(
-                call=group_call,
-                participant=await tg_app.resolve_peer(id_user),
-                muted=True
-            ))
                 shared.force_muted.append(id_user)
         else:
             if id_user in shared.force_muted and id_user not in shared.whitelist:
                 done = True
-                group_call: InputGroupCall = call_py.full_chat.call
-                await tg_app.invoke(EditGroupCallParticipant(
-                call=group_call,
-                participant=await tg_app.resolve_peer(id_user),
-                muted=False
-            ))
                 shared.force_muted.remove(id_user)
         asyncio.create_task(request_log(req, True, jsonlib.dumps({"action": req.args.get("action", ""), "done": done}), ""))
         return json({"action": req.args.get("action", ""), "done": done})

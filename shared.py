@@ -10,11 +10,10 @@ load_dotenv()
 
 DEV_MODE = True
 COMMANDS_ENABLED = False
-ENABLE_CF_AUTH = False
-GROUP_ID = os.environ.get('GROUP_ID')
+ENABLE_CF_AUTH = True
+GROUP_ID = -1001692353473
 DEF_LIMIT = 2 if DEV_MODE else 30
 limit = DEF_LIMIT
-ex_limit = [] 
 muted_queue = []
 
 DEF_WHITELIST = [
