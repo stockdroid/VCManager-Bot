@@ -11,7 +11,7 @@ load_dotenv()
 DEV_MODE = True
 COMMANDS_ENABLED = False
 ENABLE_CF_AUTH = False
-GROUP_ID = -100xxxxxxxxxx
+GROUP_ID = os.environ.get('GROUP_ID')
 DEF_LIMIT = 2 if DEV_MODE else 30
 limit = DEF_LIMIT
 ex_limit = [] 
