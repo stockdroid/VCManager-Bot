@@ -45,6 +45,36 @@ async def play_audio(req: Request, file_name: str):
         except CallBeforeStartError:
             asyncio.create_task(request_log(req, True, "", jsonlib.dumps({"error": "NotInVC"})))
             return json({"error": "NotInVC"}, 406)
+        
+@playbp.post("/play/loop/<file_name:str>")
+@openapi.secured("token")
+@openapi.response(200, {"application/json": {"playing": True}})
+@openapi.response(400, {"application/json": {"error": "FileNotFound"}})
+@openapi.response(406, {"application/json": {"error": "NotInVC"}})
+@auth_check
+async def loop_audio(req: Request, file_name: str):
+    if os.path.isfile(f"./audio/{file_name}.audio") is False:
+        asyncio.create_task(request_log(req, False, "", jsonlib.dumps({"error": "FileNotFound"})))
+        return json({"error": "FileNotFound"}, status=400)
+    else:
+        try:
+            AudioManager().loop(file_name)
+            asyncio.create_task(request_log(req, True, jsonlib.dumps({"playing": True}), ""))
+            for ws in shared.ws_list:
+                await ws.send(
+                    jsonlib.dumps({
+                        "action": f"AUDIO_STATE_UPDATE",
+                        "data": {
+                            "state": "PLAY",
+                            "seconds": 0,
+                            "filename": call_py.input_filename.replace("./audio/", "").replace(".audio", "")
+                        }
+                    })
+                )
+            return json({"playing": True})
+        except CallBeforeStartError:
+            asyncio.create_task(request_log(req, True, "", jsonlib.dumps({"error": "NotInVC"})))
+            return json({"error": "NotInVC"}, 406)
 
 
 @playbp.get("/play/list")
@@ -67,7 +97,7 @@ async def audio_duration(req: Request, file_name: str):
         asyncio.create_task(request_log(req, False, "", jsonlib.dumps({"error": "FileNotFound"})))
         return json({"error": "FileNotFound"}, status=400)
     else:
-        duration = await AudioManager().audio_duration(file_name)
+        duration = AudioManager().audio_duration(file_name)
         asyncio.create_task(request_log(req, True, jsonlib.dumps({"duration": duration}), ""))
         return json({"duration": duration})
 
@@ -79,8 +109,13 @@ async def audio_duration(req: Request, file_name: str):
 @auth_check
 async def play_status(req: Request):
     time_elapsed = await AudioManager().time_elapsed()
+    playing = AudioManager().is_playing()
+    asyncio.create_task(request_log(req, True, jsonlib.dumps({"playing": playing}), ""))
     asyncio.create_task(request_log(req, True, jsonlib.dumps({"elapsed": time_elapsed if (time_elapsed < 100000) else None}), ""))
-    return json({"elapsed": time_elapsed if (time_elapsed < 100000) else None})
+    return json({
+        "elapsed": time_elapsed if (time_elapsed < 100000) else None,
+        "playing": playing
+    })
 
 
 @playbp.patch("/play/pause")
